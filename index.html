@@ -1,0 +1,735 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>본나뚜아 찐친 3기 · 인증 (Apple 톤)</title>
+<style>
+  /* ===== Apple 톤 + 라벤더(노션) 강조색 ===== */
+  :root{
+    --ink:#1d1d1f; --paper:#f5f5f7; --card:#ffffff; --pearl:#fafafc;
+    --ash:#6e6e73; --ash-soft:#aeaeb2; --line:#e0e0e0; --line-strong:#d2d2d7;
+    --charcoal:#333333;
+    --accent:#5645d4; --accent-press:#4534b3; --accent-soft:#ece8fa;
+    --dark:#48484b;                 /* 입장 배경: 스페이스 그레이 */
+    --photo-shadow:0 6px 24px rgba(0,0,0,.16);
+    --r:18px;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;padding:0}
+  body{font-family:-apple-system,"SF Pro Display","SF Pro Text","Apple SD Gothic Neo",system-ui,sans-serif;
+    background:var(--paper); color:var(--ink); -webkit-font-smoothing:antialiased; line-height:1.47; font-weight:400; letter-spacing:-.2px;}
+  .app{max-width:480px; margin:0 auto; min-height:100vh; position:relative; padding-bottom:84px}
+
+  header.top{position:sticky; top:0; z-index:20; background:rgba(245,245,247,.82); border-bottom:1px solid var(--line); backdrop-filter:saturate(180%) blur(20px);
+    display:flex; align-items:center; justify-content:space-between; padding:9px 16px;}
+  .brand{display:flex; align-items:center; gap:11px}
+  .brand .moons{display:flex; align-items:center; gap:1px}
+  .brand .moons img{height:20px}
+  .brand img.wm{height:14px; display:block}
+  .top .who{font-size:11px; color:var(--ash); display:flex; align-items:center; gap:10px}
+  .top .who #whoName{color:var(--ink); font-weight:600}
+  .top .who button{font:inherit; font-size:11px; color:var(--accent); background:none; border:none; cursor:pointer}
+
+  .screen{display:none; padding:10px 20px 24px; animation:fade .4s ease}
+  .screen.active{display:block}
+  @keyframes fade{from{opacity:0; transform:translateY(8px)}to{opacity:1; transform:none}}
+  h1.title{font-size:26px; font-weight:600; margin:14px 2px 4px; letter-spacing:-.6px; color:var(--ink)}
+  .sub{color:var(--ash); font-size:14px; margin:0 2px 18px; letter-spacing:-.2px; line-height:1.5}
+  .card{background:var(--card); border:1px solid var(--line); border-radius:var(--r); padding:22px}
+  .card + .card{margin-top:14px}
+
+  .moon.done{color:var(--ink)} .moon.half{color:var(--ink)} .moon.miss{color:var(--ash-soft)}
+  .legend{display:flex; gap:14px; justify-content:center; font-size:12px; color:var(--ash); margin:2px 0 16px}
+  .legend span b{color:var(--ink); font-style:normal; margin-right:3px}
+
+  /* ===== 입장 (스페이스 그레이 히어로) ===== */
+  #login{display:none; flex-direction:column; min-height:calc(100vh - 28px); margin:14px; padding:0; border:1.5px solid var(--line-strong); border-radius:24px; overflow:hidden; position:relative;
+    background:var(--paper)}
+  #login.active{display:flex}   /* 입장 화면은 active(입장 전)일 때만 — 로그인 후엔 숨김 */
+  #login::before{content:""; position:absolute; top:0; left:0; right:0; height:25%; z-index:0; pointer-events:none;
+    background:url(pattern.png) repeat; background-size:460px auto; opacity:.6;
+    -webkit-mask-image:linear-gradient(180deg,#000 0%,#000 35%,transparent 100%); mask-image:linear-gradient(180deg,#000 0%,#000 35%,transparent 100%)}
+  .login-hero{flex:1; display:flex; flex-direction:column; justify-content:center; align-items:center; text-align:center; padding:60px 26px 18px; color:var(--ink); position:relative; z-index:1}
+  .login-hero .moons-big{display:flex; gap:2px; align-items:center; margin-bottom:22px}
+  .login-hero .moons-big img{height:36px}
+  .login-hero img.logo{width:48%; max-width:192px; height:auto; display:block}
+  .login-hero .slogan{font-size:13px; margin-top:14px; color:var(--ash); font-weight:300; font-style:italic}
+  .login-hero .ko{font-size:16px; margin-top:18px; letter-spacing:1px; color:var(--ink); font-weight:600}
+  .login-hero .desc{margin-top:24px; font-size:16px; color:var(--charcoal); line-height:1.6; font-weight:500}
+  .login-hero .sched{margin-top:16px; font-size:11.5px; color:var(--ash); line-height:1.6}
+  .login-pick{padding:18px 22px 40px; position:relative; z-index:1}
+  .login-pick p{font-size:13px; color:var(--ash); text-align:center; margin:0 0 14px}
+  .name-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:10px}
+  .name-grid button{font:inherit; font-size:14px; padding:13px 6px; border-radius:12px; cursor:pointer; font-weight:400;
+    background:var(--card); border:1px solid var(--line-strong); color:var(--ink); transition:.18s;}
+  .name-grid button:active{transform:scale(.95); background:var(--paper)}
+  .name-grid button.admin{grid-column:1/-1; background:var(--paper); color:var(--ash); border:1px solid var(--line); border-radius:9999px; padding:9px; font-size:12px; margin-top:8px}
+
+  /* ===== PIN 모달 ===== */
+  .modal{position:fixed; inset:0; background:rgba(0,0,0,.55); z-index:90; display:none; align-items:center; justify-content:center; padding:24px; backdrop-filter:blur(8px)}
+  .modal.show{display:flex}
+  .mbox{background:var(--card); border-radius:22px; max-width:360px; width:100%; padding:26px 24px; text-align:center}
+  .mbox h3{margin:0 0 4px; font-size:19px; letter-spacing:-.4px}
+  .mbox p{margin:0 0 18px; font-size:13px; color:var(--ash); line-height:1.5}
+  .mbox .pin-input{width:100%; font:inherit; font-size:22px; text-align:center; letter-spacing:8px; padding:13px; border:1px solid var(--line-strong); border-radius:12px; margin-bottom:12px; background:var(--pearl)}
+  .mbox .pin-input:focus{outline:none; border-color:var(--accent)}
+  .mbox .txt-input{width:100%; font:inherit; font-size:15px; padding:12px 14px; border:1px solid var(--line-strong); border-radius:12px; margin-bottom:12px; background:var(--pearl)}
+  .mbox .txt-input:focus{outline:none; border-color:var(--accent)}
+  .mbox .lbl{text-align:left; font-size:12px; color:var(--ash); margin:2px 2px 6px; font-weight:500}
+  .mbox .err{color:#d83a52; font-size:12px; min-height:16px; margin-bottom:8px}
+
+  /* ===== 오늘 인증 ===== */
+  .today-status{text-align:center; padding:24px 18px 10px}
+  .today-status .big-moon{font-size:58px; line-height:1}
+  .today-status .label{margin-top:10px; font-size:16px; font-weight:600; letter-spacing:-.3px}
+  .today-status .date{color:var(--ash); font-size:12px; margin-top:3px}
+  .week-strip{display:flex; justify-content:space-between; margin:16px 4px 4px}
+  .week-strip .d{text-align:center; flex:1}
+  .week-strip .d .m{font-size:21px}
+  .week-strip .d .dow{font-size:10px; color:var(--ash); margin-top:2px}
+  .stat-row{display:flex; gap:12px; margin-top:14px}
+  .stat-row .s{flex:1; text-align:center; background:var(--card); border:1px solid var(--line); border-radius:16px; padding:16px 6px}
+  .stat-row .s .n{font-size:23px; font-weight:600; letter-spacing:-.5px}
+  .stat-row .s .t{font-size:11px; color:var(--ash); margin-top:3px}
+
+  .btn{display:block; width:100%; font:inherit; font-size:17px; font-weight:400; padding:14px; border-radius:9999px;
+    background:var(--accent); color:#fff; border:none; cursor:pointer; letter-spacing:-.2px; transition:.18s}
+  .btn:active{transform:scale(.96); background:var(--accent-press)}
+  .btn.ghost{background:transparent; color:var(--accent); border:1px solid var(--accent); font-weight:400}
+  .btn:disabled{opacity:.4; cursor:default}
+
+  .mission-box{background:var(--accent-soft); border-radius:16px; padding:18px; margin-top:16px}
+  .mission-box .tag{font-size:12px; color:var(--accent); font-weight:600}
+  .mission-box .mtext{font-size:15px; font-weight:400; margin-top:5px; color:var(--ink); line-height:1.5}
+
+  .slot{border:1px solid var(--line); border-radius:16px; padding:15px; margin-top:13px; background:#fff}
+  .slot-h{display:flex; align-items:center; justify-content:space-between; margin-bottom:4px}
+  .slot-h .nm{font-size:15px; font-weight:600; letter-spacing:-.2px}
+  .slot-h .st{font-size:11px; color:var(--ash)}
+  .slot-h .st.ok{color:var(--accent); font-weight:600}
+  .slot .myhabit{font-size:12px; color:var(--ash); margin-bottom:10px}
+  .slot .myhabit b{color:var(--ink); font-weight:600}
+  .preview{width:100%; aspect-ratio:1/1; border-radius:12px; object-fit:cover; display:none; margin:6px 0 10px; box-shadow:var(--photo-shadow)}
+  .slot textarea{width:100%; font:inherit; font-size:14px; border:1px solid var(--line-strong); border-radius:12px; padding:11px; resize:none; margin-bottom:10px; background:#fff; color:var(--ink)}
+  .slot textarea:focus{outline:none; border-color:var(--accent)}
+  .slot .pickbtn{font:inherit; font-size:14px; width:100%; padding:12px; border-radius:9999px; background:var(--pearl); border:1px solid var(--line-strong); cursor:pointer; color:var(--ink)}
+  .slot .pickbtn:active{transform:scale(.97)}
+  input[type=file]{display:none}
+
+  /* ===== 전체 벽 (날짜별 피드) ===== */
+  .name-bar{display:flex; gap:7px; overflow-x:auto; padding:0 0 14px; -ms-overflow-style:none; scrollbar-width:none}
+  .name-bar::-webkit-scrollbar{display:none}
+  .name-bar button{flex:0 0 auto; font:inherit; font-size:13px; padding:7px 14px; border-radius:9999px; cursor:pointer; font-weight:400;
+    background:var(--card); border:1px solid var(--line-strong); color:var(--ink); white-space:nowrap; transition:.15s}
+  .name-bar button.on{background:var(--accent); border-color:var(--accent); color:#fff}
+  .name-bar button.all{background:var(--paper); border-color:var(--line); color:var(--ash)}
+  .name-bar button.all.on{background:#dcdce1; border-color:#dcdce1; color:var(--ink)}
+  .name-bar button .mn{margin-left:5px; font-size:11px; opacity:.65}
+  .feed-day-h{display:flex; align-items:center; gap:8px; margin:20px 2px 10px; font-size:16px; font-weight:600; letter-spacing:-.4px}
+  .feed-day-h .tag{font-size:11px; background:var(--accent); color:#fff; padding:2px 9px; border-radius:9999px; font-weight:400}
+  .feed-day-h .cnt{font-size:12px; color:var(--ash); font-weight:400; margin-left:auto}
+  .tile-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:6px}
+  .tile{cursor:pointer}
+  .tile .ph{margin:0}
+  .tile .cap{font-size:12px; text-align:center; margin-top:5px; color:var(--ash)}
+  .tile .cap b{color:var(--ink); font-weight:600}
+  .ph{width:100%; aspect-ratio:1/1; border-radius:14px; overflow:hidden; background:var(--paper);
+    display:flex; flex-direction:column; align-items:center; justify-content:center; border:1px solid var(--line); position:relative}
+  .ph.hasimg{border:none; box-shadow:var(--photo-shadow)}
+  .ph img{width:100%; height:100%; object-fit:cover}
+  .ph .pm{font-size:26px; color:var(--ink)}
+  .ph .pd{font-size:9px; color:var(--ash); margin-top:3px; letter-spacing:.5px}
+  .ph .lvl{position:absolute; top:6px; right:7px; font-size:13px; color:var(--ink); background:rgba(255,255,255,.92); border-radius:9999px; padding:1px 6px; box-shadow:0 1px 4px rgba(0,0,0,.12)}
+  .more-btn{display:block; width:100%; font:inherit; font-size:14px; padding:13px; border-radius:9999px; background:var(--card); border:1px solid var(--line-strong); color:var(--accent); cursor:pointer; margin-top:10px}
+
+  /* 라이트박스 */
+  .lb{position:fixed; inset:0; background:rgba(0,0,0,.55); z-index:80; display:none; align-items:center; justify-content:center; padding:22px; backdrop-filter:blur(8px)}
+  .lb.show{display:flex}
+  .lb .box{background:var(--card); border-radius:22px; max-width:400px; width:100%; max-height:86vh; overflow:auto; padding:22px}
+  .lb .box h4{margin:0 0 2px; font-size:17px; letter-spacing:-.3px}
+  .lb .box .d{font-size:12px; color:var(--ash); margin-bottom:16px}
+  .lb .item{margin-bottom:16px}
+  .lb .item .l{font-size:12px; font-weight:600; margin-bottom:7px; color:var(--ash)}
+  .lb .item img{width:100%; border-radius:14px; display:block; box-shadow:var(--photo-shadow)}
+  .lb .item .nt{font-size:14px; color:var(--charcoal); margin-top:8px; line-height:1.5}
+  .lb .item .none{aspect-ratio:1/1; border:1px solid var(--line); border-radius:14px; display:flex; align-items:center; justify-content:center; color:var(--ash-soft); font-size:32px; background:var(--paper)}
+
+  /* ===== 피드 (SNS 후기 인증) ===== */
+  .feed-sec{font-size:13px; font-weight:600; color:var(--ash); margin:18px 2px 8px; letter-spacing:0}
+  .feed-item{border:1px solid var(--line); border-radius:16px; padding:16px; margin-bottom:11px; background:#fff}
+  .feed-item .fi-h{display:flex; align-items:center; justify-content:space-between; gap:8px}
+  .feed-item .fi-t{font-size:14.5px; font-weight:600; letter-spacing:-.2px}
+  .feed-item .fi-st{font-size:11px; color:var(--ash); white-space:nowrap}
+  .feed-item .fi-st.ok{color:var(--accent); font-weight:600}
+  .feed-item .fi-m{font-size:13px; color:var(--charcoal); margin:7px 0 0; line-height:1.5}
+  .feed-item .fi-tags{font-size:11.5px; color:var(--accent); margin-top:7px; word-break:break-all}
+  .feed-item .fi-row{display:flex; gap:8px; margin-top:11px}
+  .feed-item .fi-row input{flex:1; font:inherit; font-size:13px; padding:10px 12px; border:1px solid var(--line-strong); border-radius:9999px; background:var(--pearl); min-width:0}
+  .feed-item .fi-row input:focus{outline:none; border-color:var(--accent)}
+  .feed-item .fi-row button{font:inherit; font-size:13px; padding:0 16px; border-radius:9999px; background:var(--accent-soft); color:var(--accent); border:none; cursor:pointer; white-space:nowrap; font-weight:600}
+  .feed-guide{background:var(--accent-soft); border-radius:14px; padding:13px 15px; font-size:12.5px; color:var(--charcoal); line-height:1.6; margin-bottom:6px}
+  .feed-guide b{color:var(--accent)}
+
+  /* ===== 내 기록 ===== */
+  .dash-hero{text-align:center; padding:10px 0 8px}
+  .dash-hero .rate{font-size:52px; font-weight:600; letter-spacing:-1.5px; line-height:1; color:var(--accent)}
+  .dash-hero .rate small{font-size:20px; color:var(--ash); font-weight:600}
+  .dash-hero .ratesub{font-size:12px; color:var(--ash); margin-top:6px}
+  .kpi{display:flex; gap:10px; margin-top:16px}
+  .kpi .k{flex:1; text-align:center; padding:14px 4px; background:var(--card); border:1px solid var(--line); border-radius:16px}
+  .kpi .k .n{font-size:20px; font-weight:600; letter-spacing:-.5px}
+  .kpi .k .t{font-size:10.5px; color:var(--ash); margin-top:4px}
+  .cal-row{display:flex; align-items:center; gap:7px; margin-bottom:6px}
+  .cal-row .wk{font-size:10px; color:var(--ash); width:30px; flex-shrink:0}
+  .cal-row .days{display:flex; gap:6px; flex:1; justify-content:center}
+  .cal-row .days .m{font-size:17px; width:18px; text-align:center}
+  .gallery{display:grid; grid-template-columns:repeat(4,1fr); gap:7px}
+  .gallery .ph{margin:0; border-radius:10px}
+  .gallery .ph .pm{font-size:16px}
+
+  .cert{position:relative; text-align:center; padding:34px 26px; background:linear-gradient(180deg,#ffffff,#faf9ff); border:2.5px solid #d2d2d7; border-radius:6px; overflow:hidden}
+  .cert>*{position:relative; z-index:1}
+  .cert::before{content:""; position:absolute; top:0; left:0; right:0; height:26%; z-index:0; pointer-events:none; border-radius:4px 4px 0 0;
+    background:url(pattern.png) no-repeat center top; background-size:100% auto; opacity:.5;
+    -webkit-mask-image:linear-gradient(180deg,#000 0%,#000 30%,transparent 100%); mask-image:linear-gradient(180deg,#000 0%,#000 30%,transparent 100%)}
+  .cert::after{content:""; position:absolute; inset:9px; border:1px solid #d2d2d7; border-radius:3px; pointer-events:none; opacity:.7; z-index:2}
+  .cert .moons{display:flex; justify-content:center; gap:2px; align-items:center; margin-bottom:4px}
+  .cert .moons img{height:30px}
+  .cert h3{font-size:18px; margin:10px 0 2px; letter-spacing:-.3px; font-weight:600}
+  .cert .recv{font-size:24px; font-weight:600; margin:8px 0; letter-spacing:-.5px}
+  .cert .body{font-size:14px; color:var(--charcoal); line-height:1.7}
+  .cert .body b{color:var(--accent)}
+  .cert .cgal{display:grid; grid-template-columns:repeat(6,1fr); gap:5px; margin:16px 0 6px}
+  .cert .cgal .ph{aspect-ratio:1/1; border-radius:9px}
+  .cert .cgal .ph .pm{font-size:14px}
+  .cert .signlogo{width:23%; max-width:90px; height:auto; display:block; margin:18px auto 4px}
+  .cert .sign{font-size:11px; color:var(--ash); letter-spacing:.5px}
+  .cert.locked{border-style:dashed; border-color:var(--ash-soft)}
+  .cert.locked .moons{opacity:.45}
+  .cert.locked .lockmsg{font-size:14px; color:var(--ash)}
+
+  /* ===== 운영자 리포트 ===== */
+  .rep-nav{display:flex; align-items:center; justify-content:center; gap:14px; margin-bottom:6px}
+  .rep-nav button{font:inherit; font-size:18px; width:34px; height:34px; border-radius:9999px; border:1px solid var(--line-strong); background:var(--card); color:var(--ink); cursor:pointer}
+  .rep-nav button:disabled{opacity:.3; cursor:default}
+  .rep-nav .wk{font-size:13px; color:var(--ash); min-width:150px; text-align:center}
+  .rep-head{text-align:center; padding:4px 0 14px}
+  .rep-head .rate{font-size:32px; font-weight:600; letter-spacing:-.6px}
+  .rep-head .delta{font-size:12px; color:var(--ash)}
+  .rep-row{display:flex; align-items:center; gap:10px; padding:10px 2px; border-bottom:1px solid var(--line)}
+  .rep-row:last-child{border-bottom:none}
+  .rep-row .nm{width:74px; font-size:13px; flex-shrink:0; font-weight:500}
+  .rep-row .ms{flex:1; font-size:16px; letter-spacing:1px; text-align:center}
+  .rep-row .cnt{font-size:12px; color:var(--ash); width:46px; text-align:right; flex-shrink:0}
+  .rep-row .flag{font-size:11px; width:14px}
+  .praise{font-size:14px; line-height:1.8}
+  .copybox{background:var(--paper); border-radius:14px; padding:16px; font-size:12px; color:var(--charcoal); white-space:pre-wrap; line-height:1.6; max-height:230px; overflow:auto}
+  .closing{text-align:center; color:var(--ash); font-size:12px; padding:24px 0 8px; line-height:1.5}
+
+  nav.tabs{position:fixed; bottom:0; left:50%; transform:translateX(-50%); width:100%; max-width:480px;
+    background:rgba(245,245,247,.82); backdrop-filter:saturate(180%) blur(20px); border-top:1px solid var(--line);
+    display:flex; padding:8px 4px calc(8px + env(safe-area-inset-bottom)); z-index:30;}
+  nav.tabs button{flex:1; background:none; border:none; cursor:pointer; font:inherit; color:var(--ink); padding:6px 2px; margin:0 2px; border-radius:14px; transition:.15s}
+  nav.tabs button .ic{font-size:17px; display:block; height:22px; line-height:22px}
+  nav.tabs button .ic img{height:22px; display:block; margin:0 auto}
+  nav.tabs button .tlab{font-size:9px; margin-top:3px; color:var(--ash); white-space:nowrap; letter-spacing:-.2px}
+  nav.tabs button.on{background:var(--accent-soft)}
+  nav.tabs button.on .tlab{font-weight:600; color:var(--accent)}
+
+  .toast{position:fixed; left:50%; bottom:96px; transform:translateX(-50%) translateY(20px); opacity:0;
+    background:var(--ink); color:#fff; font-size:14px; padding:12px 20px; border-radius:9999px; z-index:95; transition:.3s; pointer-events:none}
+  .toast.show{opacity:1; transform:translateX(-50%) translateY(0)}
+  .demo-badge{position:fixed; top:8px; right:8px; z-index:60; background:var(--ink); color:#fff; font-size:9.5px;
+    padding:3px 9px; border-radius:9999px; letter-spacing:.3px; opacity:.8}
+</style>
+</head>
+<body>
+<div class="app" id="app">
+
+  <header class="top" id="topbar" style="display:none">
+    <div class="brand"><span class="moons"><img src="moon_left.png"><img src="moon_bottom.png"><img src="moon_full.png"><img src="moon_right.png"><img src="moon_top.png"></span><img class="wm" src="logo_W_trim.png" alt="VONNATUR"></div>
+    <div class="who"><span id="whoName"></span><button id="logout">나가기</button></div>
+  </header>
+
+  <!-- 입장 -->
+  <section id="login" class="screen active">
+    <div class="login-hero">
+      <div class="moons-big"><img src="moon_left.png"><img src="moon_bottom.png"><img src="moon_full.png"><img src="moon_right.png"><img src="moon_top.png"></div>
+      <img class="logo" src="logo_2line.png" alt="VONNATUR · My healing skin sleep therapy">
+      <div class="ko">[ 찐친 3기 ]</div>
+      <div class="desc">매일 두 컷으로 채우는 나만의 룰러바이 🌙<br>오늘의 ① 잘자요루틴 ② 습관만들기</div>
+      <div class="sched">📅 워밍업 6/1~7 · OT 6/3(수) 밤 10:30<br>챌린지 6/8~8/2 (8주) · 오프모임 8/22 or 23 (투표)</div>
+    </div>
+    <div class="login-pick">
+      <p>나를 선택해 입장하기</p>
+      <div class="name-grid" id="nameGrid"></div>
+    </div>
+  </section>
+
+  <!-- 오늘 인증 -->
+  <section id="today" class="screen">
+    <h1 class="title">오늘 인증</h1>
+    <p class="sub" id="todaySub"></p>
+    <div class="card">
+      <div class="today-status">
+        <div class="big-moon" id="todayMoon">○</div>
+        <div class="label" id="todayLabel"></div>
+        <div class="date" id="todayDate"></div>
+      </div>
+      <div class="week-strip" id="weekStrip"></div>
+    </div>
+    <div class="stat-row">
+      <div class="s"><div class="n" id="stStreak">0</div><div class="t">연속 인증</div></div>
+      <div class="s"><div class="n" id="stWeek">0/7</div><div class="t">이번 주</div></div>
+      <div class="s"><div class="n" id="stRate">0%</div><div class="t" id="stRateSub">전체 0%</div></div>
+    </div>
+    <div class="mission-box">
+      <div class="tag">🎯 이번 주 미션</div>
+      <div class="mtext" id="missionText"></div>
+    </div>
+    <div class="slot" id="slotProduct">
+      <div class="slot-h"><span class="nm">🧴 잘자요루틴</span><span class="st" id="stP">아직</span></div>
+      <div class="myhabit">본나뚜아 제품 사용 루틴 한 컷</div>
+      <img class="preview" id="prevP" alt="">
+      <textarea id="noteP" rows="1" placeholder="한 줄 메모 (선택)"></textarea>
+      <input type="file" id="fileP" accept="image/*">
+      <button class="pickbtn" id="pickP">📷 #잘자요루틴 올리기</button>
+    </div>
+    <div class="slot" id="slotHabit">
+      <div class="slot-h"><span class="nm">🌱 습관만들기</span><span class="st" id="stH">아직</span></div>
+      <div class="myhabit" id="myHabit"></div>
+      <img class="preview" id="prevH" alt="">
+      <textarea id="noteH" rows="1" placeholder="한 줄 메모 (선택)"></textarea>
+      <input type="file" id="fileH" accept="image/*">
+      <button class="pickbtn" id="pickH">📷 #습관만들기 올리기</button>
+    </div>
+    <button class="btn" id="submitBtn" style="margin-top:16px" disabled>오늘 인증 올리기</button>
+    <div class="closing">당일 23:59까지 사진 인증만 인정!<br>한 컷=◐ 절반, 두 컷=● 완성</div>
+  </section>
+
+  <!-- 전체 벽 -->
+  <section id="wall" class="screen">
+    <h1 class="title" id="wallTitle">찐친 인증 보드</h1>
+    <p class="sub">날짜별로 모아보기 — 닉네임을 누르면 멤버별로 모아보기</p>
+    <div class="name-bar" id="nameBar"></div>
+    <div class="legend"><span><b>●</b>두 컷 다</span><span><b>◐</b>한 컷만</span><span>(사진 누르면 크게+메모)</span></div>
+    <div id="wallFeed"></div>
+  </section>
+
+  <!-- 피드 (SNS 후기 인증) -->
+  <section id="feed" class="screen">
+    <h1 class="title">피드 인증</h1>
+    <p class="sub">스레드에 올린 후기 링크를 여기에 붙여 인증해요 (@vonnatur 소환 필수)</p>
+    <div id="feedBody"></div>
+  </section>
+
+  <!-- 내 기록 -->
+  <section id="me" class="screen">
+    <h1 class="title">내 기록</h1>
+    <p class="sub" id="meSub"></p>
+    <div class="card">
+      <div class="dash-hero">
+        <div class="rate"><span id="meRate">0</span><small>%</small></div>
+        <div class="ratesub" id="meRateSub"></div>
+      </div>
+      <div class="kpi">
+        <div class="k"><div class="n" id="meTotal">0</div><div class="t">인증한 날</div></div>
+        <div class="k"><div class="n" id="meFull">0</div><div class="t">완성(●)한 날</div></div>
+        <div class="k"><div class="n" id="meStreak">0</div><div class="t">최장 연속</div></div>
+      </div>
+    </div>
+    <div class="card">
+      <div style="font-size:14px;font-weight:600;margin-bottom:6px;letter-spacing:-.3px">🌙 인증 캘린더</div>
+      <div class="legend" style="margin:0 0 12px"><span><b>●</b>두 컷</span><span><b>◐</b>한 컷</span><span><b style="color:var(--ash-soft)">○</b>미인증</span></div>
+      <div id="meCal"></div>
+    </div>
+    <div class="card">
+      <div style="font-size:14px;font-weight:600;margin-bottom:10px;letter-spacing:-.3px">📷 내 인증샷 갤러리</div>
+      <div class="gallery" id="meGallery"></div>
+      <button class="more-btn" id="galMore" style="display:none">더 보기</button>
+    </div>
+    <div style="margin-top:14px" id="meCert"></div>
+  </section>
+
+  <!-- 운영자 리포트 -->
+  <section id="report" class="screen">
+    <h1 class="title">주간 리포트</h1>
+    <p class="sub">운영자 전용 화면 · 매주 일요일 밤 자동 생성</p>
+    <div class="card">
+      <div class="rep-nav">
+        <button id="repPrev">◀</button><span class="wk" id="repWk"></span><button id="repNext">▶</button>
+      </div>
+      <div class="rep-head">
+        <div class="rate" id="repAvg"></div>
+        <div class="delta" id="repDelta"></div>
+      </div>
+      <div class="legend" style="margin:0 0 8px"><span><b>●</b>두 컷</span><span><b>◐</b>한 컷</span><span><b style="color:var(--ash-soft)">○</b>미인증</span></div>
+      <div id="repRows"></div>
+    </div>
+    <div class="card">
+      <div style="font-size:14px;font-weight:600;margin-bottom:8px;letter-spacing:-.3px">🏆 이번 주 칭찬</div>
+      <div class="praise" id="repPraise"></div>
+    </div>
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <div style="font-size:14px;font-weight:600;letter-spacing:-.3px">📋 카톡 복붙용</div>
+        <button class="btn ghost" id="copyBtn" style="width:auto;padding:8px 16px;font-size:13px">복사</button>
+      </div>
+      <div class="copybox" id="repCopy"></div>
+    </div>
+    <div class="closing">기록은 서버에 저장돼요 · 이 화면에서 ◀▶로 지난 주차도 볼 수 있어요</div>
+  </section>
+
+  <nav class="tabs" id="tabs" style="display:none">
+    <button data-screen="today" class="on"><span class="ic"><img src="moon_right.png"></span><span class="tlab">오늘 인증</span></button>
+    <button data-screen="wall"><span class="ic"><img src="moon_full.png"></span><span class="tlab">찐친 인증 보드</span></button>
+    <button data-screen="feed"><span class="ic"><svg viewBox="0 0 24 24" width="21" height="21" fill="currentColor" style="vertical-align:-3px"><path d="M12.186 24h-.007c-3.581-.024-6.334-1.205-8.184-3.509C2.35 18.44 1.5 15.586 1.472 12.01v-.017c.03-3.579.879-6.43 2.525-8.482C5.845 1.205 8.6.024 12.18 0h.014c2.746.02 5.043.725 6.826 2.098 1.677 1.29 2.858 3.13 3.509 5.467l-2.04.569c-1.104-3.96-3.898-5.984-8.304-6.015-2.91.022-5.11.936-6.54 2.717C4.307 6.504 3.616 8.914 3.589 12c.027 3.086.718 5.496 2.057 7.164 1.43 1.781 3.631 2.695 6.54 2.717 2.623-.02 4.358-.631 5.8-2.045 1.647-1.613 1.618-3.593 1.09-4.798-.31-.71-.873-1.3-1.633-1.75-.192 1.352-.622 2.446-1.284 3.272-.886 1.102-2.14 1.704-3.73 1.79-1.202.065-2.36-.218-3.259-.801-1.063-.689-1.685-1.74-1.752-2.964-.065-1.19.408-2.285 1.33-3.082.88-.76 2.119-1.207 3.583-1.291a13.85 13.85 0 0 1 3.02.142c-.126-.742-.375-1.332-.74-1.757-.5-.586-1.27-.89-2.29-.5h-.04c-.814.025-1.398.246-1.732.66l-1.564-1.052c.682-.95 1.798-1.479 3.296-1.479h.06c2.5.025 3.99 1.554 4.14 4.198l.012.21c.95.367 1.78.95 2.42 1.74.92 1.135 1.398 2.616 1.196 4.385-.286 2.484-1.59 4.32-3.875 5.453-1.387.688-2.97 1.028-4.726 1.028zm1.943-11.061c-.183 0-.368.006-.553.018-1.795.103-2.91.93-2.84 2.106.07 1.234 1.43 1.81 2.74 1.74 1.203-.065 2.785-.534 3.05-3.567a8.5 8.5 0 0 0-2.397-.297z"/></svg></span><span class="tlab">피드 인증</span></button>
+    <button data-screen="me"><span class="ic"><img src="moon_bottom.png"></span><span class="tlab">내 기록</span></button>
+    <button data-screen="report" id="tabReport"><span class="ic"><img src="moon_top.png"></span><span class="tlab">주간 리포트</span></button>
+  </nav>
+</div>
+
+<div class="toast" id="toast"></div>
+<div class="lb" id="lightbox"><div class="box" id="lbBox"></div></div>
+<div class="modal" id="pinModal"><div class="mbox" id="pinBox"></div></div>
+
+<script>
+/* ============================================================
+   본나뚜아 찐친 3기 — Apple 톤 + 날짜별 피드 (단일 파일·백엔드 없음, 시연용)
+   ============================================================ */
+const CFG = { start:'2026-06-08', today:'2026-06-25', weeks:8, passRate:80, adminPin:'__admin__' };  // 챌린지 6/8~8/2 (8주)
+const COUNT_FULL_ONLY = false;
+const DOW=['일','월','화','수','목','금','토'];
+const MISSIONS=[
+  '루틴 고정 — 내 스킨케어 시간 정하고, 인증샷에 시계/폰시계 함께 ⏱️',
+  '속도 습관 — 세안 후 1분 안에 바르기, 타이머와 함께 ⏱️',
+  'Before 기록 — 맨얼굴 클로즈업 1컷 (변화의 기준점)',
+  '중간 점검 — 중간설문 + "요즘 내 피부 한 줄 일기"',
+  '루틴 심화 — 아침·저녁 2회 인증 도전 (1회도 OK)',
+  '추천 — 내 찐친템 한마디 추천 + 사용 컷',
+  '스토리 — 8주 중 가장 좋았던 변화 사진 + 코멘트',
+  '마무리 — 마무리설문 + Before/After 비교샷 + 오프미팅 🌿',
+];
+// SNS 사용 스토리 미션 (언박싱/2/4/6/8주) — 미션형
+const STORY_MISSIONS=[
+  {key:'unbox', label:'언박싱 (시작)', m:'첫인상 미션 — 웰컴키트 개봉 컷 + 가장 끌리는 제품 하나와 그 이유를 스레드에', tags:'@vonnatur #본나뚜아 #본나뚜아찐친3기 #0주사용후기'},
+  {key:'w2', label:'2주차', m:'첫 변화 미션 — 2주 루틴 후 가장 먼저 느낀 피부 변화 한 가지 + 사용 컷', tags:'@vonnatur #본나뚜아찐친3기 #2주사용후기'},
+  {key:'w4', label:'4주차', m:'비교 미션 — 시작 전 vs 지금, 달라진 점 (사진·표현 자유)', tags:'@vonnatur #본나뚜아찐친3기 #4주사용후기'},
+  {key:'w6', label:'6주차', m:'추천 미션 — 내 최애템과 "이런 분께 추천" 한마디', tags:'@vonnatur #본나뚜아찐친3기 #6주사용후기'},
+  {key:'w8', label:'8주차', m:'완주 스토리 미션 — 8주 여정 요약 + Before/After', tags:'@vonnatur #본나뚜아찐친3기 #8주사용후기'},
+];
+// 제품별 후기 (개수·구성 추후 조정)
+const PRODUCT_REVIEWS=[
+  {key:'p1', label:'잘자요 수분크림', tags:'#잘자요수분크림'},
+  {key:'p2', label:'잘자요 영양크림', tags:'#잘자요영양크림'},
+  {key:'p3', label:'슈퍼-콜라겐 앰플', tags:'#잘자요앰플'},
+  {key:'p4', label:'알로에 수딩젤', tags:'#본나뚜아알로에수딩젤'},
+];
+const PEOPLE=[['멤버1',0.99],['멤버2',0.92],['멤버3',0.9],['멤버4',0.86],
+  ['멤버5',0.83],['멤버6',0.8],['멤버7',0.74],['멤버8',0.66],
+  ['멤버9',0.7],['멤버10',0.6],['멤버11',0.5],['멤버12',0.32]];   // 실제 멤버 정해지면 이름만 교체
+
+const dayMs=86400000;
+function parse(s){const[y,m,d]=s.split('-').map(Number);return new Date(y,m-1,d);}
+function fmt(dt){return dt.getFullYear()+'-'+String(dt.getMonth()+1).padStart(2,'0')+'-'+String(dt.getDate()).padStart(2,'0');}
+function addDays(s,n){const d=parse(s);d.setDate(d.getDate()+n);return fmt(d);}
+function mmdd(s){const[,m,d]=s.split('-');return `${+m}/${+d}`;}
+const START=CFG.start, TODAY=CFG.today;
+const elapsed=Math.round((parse(TODAY)-parse(START))/dayMs)+1;
+const totalDays=CFG.weeks*7;
+const curWeek=Math.floor((elapsed-1)/7)+1;
+const allDates=Array.from({length:totalDays},(_,i)=>addDays(START,i));
+const pastDates=allDates.filter(d=>parse(d)<=parse(TODAY));
+
+// 시드: 각 날짜 {lvl, img}  (img=예시 사진 일부)
+function rng(seed){let s=seed%2147483647; if(s<=0)s+=2147483646; return ()=>(s=s*16807%2147483647)/2147483647;}
+const SAMPLES=[['#efe9f7','#9f8bd6'],['#e9f0ef','#8fb3ab'],['#f3ece6','#c6a890'],['#e8eef4','#93b1d0'],['#f4ecec','#cf9aa6']];
+function svgSample(p){return "data:image/svg+xml,"+encodeURIComponent(
+  "<svg xmlns='http://www.w3.org/2000/svg' width='240' height='240'><rect width='240' height='240' fill='"+p[0]+"'/><circle cx='116' cy='94' r='48' fill='"+p[1]+"' opacity='.45'/><circle cx='162' cy='170' r='76' fill='"+p[1]+"' opacity='.22'/><text x='120' y='216' font-size='13' fill='"+p[1]+"' text-anchor='middle' font-family='sans-serif'>예시 사진</text></svg>");}
+const seed={};
+PEOPLE.forEach(([nm,rel],idx)=>{const r=rng(idx*97+13); const o={}; const pal=SAMPLES[idx%SAMPLES.length];
+  pastDates.forEach((d,di)=>{let p=rel; if(nm==='멤버9')p=di<7?0.35:(di<14?0.7:0.95);
+    if(r()<p){const lvl=r()<0.78?2:1; const img=r()<0.45?svgSample(pal):null; o[d]={lvl,img};}});
+  seed[nm]=o;});
+
+const LS_DATA='vonnatur_jjinchin3_apple_v2', LS_HABIT='vonnatur_jjinchin3_apple_habit_v2',
+      LS_PIN='vonnatur_jjinchin3_apple_pin_v2', LS_FEED='vonnatur_jjinchin3_apple_feed_v2';   // _v2 = 비번·데이터 초기화
+function load(k){try{return JSON.parse(localStorage.getItem(k))||{}}catch(e){return{}}}
+let mine=load(LS_DATA), habits=load(LS_HABIT), pins=load(LS_PIN), feed=load(LS_FEED);
+function save(){localStorage.setItem(LS_DATA,JSON.stringify(mine)); localStorage.setItem(LS_HABIT,JSON.stringify(habits));
+  localStorage.setItem(LS_PIN,JSON.stringify(pins)); localStorage.setItem(LS_FEED,JSON.stringify(feed));}
+
+let user=null;
+const $=id=>document.getElementById(id);
+function meName(){return user==='__admin__'?'멤버1':user;}
+function isAdmin(){return user==='__admin__';}
+
+function dayData(nm,date){
+  const s = seed[nm] && seed[nm][date];
+  let lvl = s? s.lvl : 0;
+  if(nm===meName() && date===TODAY) lvl=0;
+  const m = mine[nm] && mine[nm][date];
+  if(m){const c=(m.product?1:0)+(m.habit?1:0); lvl=Math.max(lvl,c);}
+  let img = (m && ((m.product&&m.product.img) || (m.habit&&m.habit.img))) || (nm===meName()&&date===TODAY ? null : (s&&s.img)) || null;
+  return {lvl, img, mine:m||null, seedImg:(s&&s.img)||null};
+}
+function isCert(nm,d){const l=dayData(nm,d).lvl; return COUNT_FULL_ONLY? l>=2 : l>=1;}
+function moonChar(l){return l>=2?'●':(l>=1?'◐':'○');}
+function moonCls(l){return l>=2?'done':(l>=1?'half':'miss');}
+
+// ===== 입장 + 비밀번호 =====
+function buildLogin(){const g=$('nameGrid'); g.innerHTML='';
+  PEOPLE.forEach(([nm])=>{const b=document.createElement('button'); b.textContent=nm; b.onclick=()=>openPin(nm); g.appendChild(b);});
+  const a=document.createElement('button'); a.className='admin'; a.textContent='운영자로 보기'; a.onclick=()=>openPin('__admin__'); g.appendChild(a);}
+
+function openPin(nm){
+  const admin=nm==='__admin__'; const len=admin?4:2; const box=$('pinBox');
+  const exists = pins[nm]!==undefined;
+  if(!exists){ // 첫 입장: 비번 설정 (+ 참여자는 습관 입력)
+    box.innerHTML=`<h3>${admin?'운영자 설정':nm+' 뚜아님, 환영해요!'}</h3>
+      <p>${admin?'운영자 비밀번호 4자리를 정해주세요':'처음 오셨네요 🌙 비밀번호 '+len+'자리를 정하고, 이번 기수에 만들 내 습관도 적어주세요'}</p>
+      <input class="pin-input" id="pinA" type="tel" inputmode="numeric" maxlength="${len}" placeholder="${'•'.repeat(len)}">
+      ${admin?'':`<div class="lbl">🌱 내가 정한 습관 (예: 물 2L 마시기 / 11시 전 취침)</div><input class="txt-input" id="habitA" placeholder="내 습관 한 가지">`}
+      <div class="err" id="pinErr"></div>
+      <button class="btn" id="pinGo">시작하기</button>
+      <button class="btn ghost" id="pinCancel" style="margin-top:8px">취소</button>`;
+    $('pinGo').onclick=()=>{const v=$('pinA').value.trim();
+      if(v.length!==len||!/^\d+$/.test(v)){$('pinErr').textContent=`숫자 ${len}자리로 입력해주세요`;return;}
+      if(!admin){const h=$('habitA').value.trim(); if(!h){$('pinErr').textContent='내 습관을 적어주세요';return;} habits[nm]=h;}
+      pins[nm]=v; save(); closePin(); enter(nm);};
+  }else{ // 재입장: 비번 확인
+    box.innerHTML=`<h3>${admin?'운영자':nm+' 뚜아님'}</h3><p>비밀번호 ${len}자리를 입력해주세요</p>
+      <input class="pin-input" id="pinA" type="tel" inputmode="numeric" maxlength="${len}" placeholder="${'•'.repeat(len)}">
+      <div class="err" id="pinErr"></div>
+      <button class="btn" id="pinGo">입장</button>
+      <button class="btn ghost" id="pinCancel" style="margin-top:8px">취소</button>`;
+    $('pinGo').onclick=()=>{const v=$('pinA').value.trim();
+      if(v!==pins[nm]){$('pinErr').textContent='비밀번호가 달라요';$('pinA').value='';return;} closePin(); enter(nm);};
+  }
+  $('pinCancel').onclick=closePin; $('pinModal').classList.add('show'); setTimeout(()=>$('pinA').focus(),50);
+}
+function closePin(){$('pinModal').classList.remove('show');}
+
+function enter(nm){user=nm;
+  $('tabs').style.display='flex';
+  $('tabReport').style.display = isAdmin()?'block':'none';   // 리포트는 운영자만
+  $('whoName').textContent=isAdmin()?'운영자':nm;
+  go(isAdmin()?'report':'today');}
+$('logout').onclick=()=>{user=null; $('topbar').style.display='none'; $('tabs').style.display='none'; go('login');};
+
+// ===== 화면 전환 =====
+function go(scr){document.querySelectorAll('.screen').forEach(s=>s.classList.toggle('active',s.id===scr));
+  document.querySelectorAll('#tabs button').forEach(b=>b.classList.toggle('on',b.dataset.screen===scr));
+  $('topbar').style.display = (scr==='login')?'none':'flex';   // 브랜드 배너: 로그인 외 전 탭 노출
+  window.scrollTo(0,0);
+  if(scr==='today')renderToday(); if(scr==='wall')renderWall(); if(scr==='feed')renderFeed();
+  if(scr==='me')renderMe(); if(scr==='report')renderReport();}
+document.querySelectorAll('#tabs button').forEach(b=>b.onclick=()=>go(b.dataset.screen));
+
+// ===== 오늘 인증 =====
+let pendP=null, pendH=null;
+function renderToday(){
+  const nm=meName();
+  $('todaySub').textContent=`${curWeek}주차 · ${DOW[parse(TODAY).getDay()]}요일 (${mmdd(TODAY)})`;
+  const {lvl,mine:m}=dayData(nm,TODAY);
+  $('todayMoon').textContent=moonChar(lvl);
+  $('todayLabel').textContent= lvl>=2?'오늘 인증 완성! 잘했어요 🌙' : lvl>=1?'절반 완성 ◐ — 한 컷만 더 올리면 보름달!' : '아직 오늘 인증 전이에요';
+  $('todayDate').textContent=`${TODAY} · 자정 전까지 인정`;
+  const wkStart=addDays(START,(curWeek-1)*7); const strip=$('weekStrip'); strip.innerHTML='';
+  for(let i=0;i<7;i++){const d=addDays(wkStart,i); const fut=parse(d)>parse(TODAY); const l=dayData(nm,d).lvl;
+    strip.innerHTML+=`<div class="d"><div class="m moon ${moonCls(l)}">${fut?'·':moonChar(l)}</div><div class="dow">${DOW[parse(d).getDay()]}</div></div>`;}
+  $('stStreak').textContent=streak(nm)+'일';
+  let wc=0; for(let i=0;i<7;i++){if(isCert(nm,addDays(wkStart,i)))wc++;} $('stWeek').textContent=wc+'/7';
+  const ewk=Math.min(7, Math.round((parse(TODAY)-parse(wkStart))/dayMs)+1);
+  let cc=0; pastDates.forEach(d=>{if(isCert(nm,d))cc++;});
+  $('stRate').textContent=Math.round(wc/ewk*100)+'%'; $('stRateSub').textContent='전체 '+Math.round(cc/elapsed*100)+'%';
+  $('missionText').textContent=MISSIONS[curWeek-1];
+  $('myHabit').innerHTML = habits[nm]? `내 습관: <b>${habits[nm]}</b> 인증 컷` : '내 습관 인증 컷';
+  slotState('P',$('stP'),$('prevP'),$('pickP'),$('noteP'), m&&m.product);
+  slotState('H',$('stH'),$('prevH'),$('pickH'),$('noteH'), m&&m.habit);
+  updateSubmit();
+}
+function slotState(which,stEl,prevEl,btnEl,noteEl,saved){
+  const pend = which==='P'?pendP:pendH; const plain = which==='P'?'잘자요루틴':'습관만들기';
+  if(saved && !pend){stEl.textContent='완료 ✓'; stEl.className='st ok';
+    prevEl.src=saved.img; prevEl.style.display='block'; btnEl.textContent='다시 올리기'; noteEl.value=saved.note||'';}
+  else if(pend){stEl.textContent='올릴 준비됨'; stEl.className='st ok'; prevEl.src=pend; prevEl.style.display='block'; btnEl.textContent='사진 바꾸기';}
+  else{stEl.textContent='아직'; stEl.className='st'; prevEl.style.display='none'; btnEl.textContent=`📷 ${plain} 올리기`;}
+}
+function updateSubmit(){const nm=meName(); const {mine:m}=dayData(nm,TODAY);
+  const savedBoth = m&&m.product&&m.habit;
+  $('submitBtn').disabled = (!pendP && !pendH);
+  $('submitBtn').textContent = savedBoth&&!pendP&&!pendH ? '오늘 인증 완성 🌙' : '오늘 인증 올리기';}
+function resizeImg(file,cb){const rd=new FileReader(); rd.onload=ev=>{const img=new Image();
+  img.onload=()=>{const max=720,sc=Math.min(1,max/Math.max(img.width,img.height));
+    const c=document.createElement('canvas'); c.width=img.width*sc; c.height=img.height*sc;
+    c.getContext('2d').drawImage(img,0,0,c.width,c.height); cb(c.toDataURL('image/jpeg',0.72));};
+  img.src=ev.target.result;}; rd.readAsDataURL(file);}
+$('pickP').onclick=()=>$('fileP').click();
+$('pickH').onclick=()=>$('fileH').click();
+$('fileP').onchange=e=>{const f=e.target.files[0]; if(f)resizeImg(f,d=>{pendP=d; renderToday();});};
+$('fileH').onchange=e=>{const f=e.target.files[0]; if(f)resizeImg(f,d=>{pendH=d; renderToday();});};
+$('submitBtn').onclick=()=>{const nm=meName(); mine[nm]=mine[nm]||{}; mine[nm][TODAY]=mine[nm][TODAY]||{};
+  if(pendP) mine[nm][TODAY].product={img:pendP, note:$('noteP').value.trim()};
+  if(pendH) mine[nm][TODAY].habit={img:pendH, note:$('noteH').value.trim()};
+  pendP=pendH=null; save();
+  const lvl=dayData(nm,TODAY).lvl;
+  toast(lvl>=2?'오늘 인증 완성! 🌙 잘했어요':'한 컷 인증 완료 ◐ — 한 컷 더 채워봐요!');
+  renderToday();};
+function streak(nm){let d=isCert(nm,TODAY)?TODAY:addDays(TODAY,-1); let n=0; while(isCert(nm,d)){n++; d=addDays(d,-1);} return n;}
+
+// ===== 전체 벽 =====
+let wallFilter='전체', wallShowAll=false;
+function renderWall(){
+  const bar=$('nameBar'); bar.innerHTML='';
+  const all=document.createElement('button'); all.textContent='전체'; all.className='all'+(wallFilter==='전체'?' on':'');
+  all.onclick=()=>{wallFilter='전체'; renderWall();}; bar.appendChild(all);
+  PEOPLE.forEach(([nm])=>{let c=0; pastDates.forEach(d=>{if(isCert(nm,d))c++;});
+    const b=document.createElement('button'); b.innerHTML=`${nm}<span class="mn">${c}</span>`; if(wallFilter===nm)b.classList.add('on');
+    b.onclick=()=>{wallFilter=nm; renderWall();}; bar.appendChild(b);});
+  const wrap=$('wallFeed'); wrap.innerHTML='';
+  if(wallFilter==='전체'){
+    const wkStart=addDays(START,(curWeek-1)*7);
+    const dates=pastDates.slice().reverse().filter(d=> wallShowAll || parse(d)>=parse(wkStart));
+    dates.forEach(d=>{const people=PEOPLE.filter(([nm])=>isCert(nm,d)).map(([nm])=>nm);
+      if(people.length===0)return;
+      wrap.appendChild(dayHeader(d,people.length));
+      const grid=document.createElement('div'); grid.className='tile-grid';
+      people.forEach(nm=>grid.appendChild(tile(nm,d,'name'))); wrap.appendChild(grid);});
+    if(!wallShowAll){const more=document.createElement('button'); more.className='more-btn'; more.textContent='이전 주차 더 보기';
+      more.onclick=()=>{wallShowAll=true; renderWall();}; wrap.appendChild(more);}
+  }else{
+    const nm=wallFilter; const dates=pastDates.filter(d=>isCert(nm,d)).reverse();
+    const h=document.createElement('div'); h.className='feed-day-h';
+    h.innerHTML=`<span>${nm} 뚜아님</span><span class="cnt">${dates.length}일 인증</span>`; wrap.appendChild(h);
+    if(dates.length===0){wrap.innerHTML+='<p class="sub" style="text-align:center;margin-top:24px">아직 인증이 없어요</p>'; return;}
+    const grid=document.createElement('div'); grid.className='tile-grid';
+    dates.forEach(d=>grid.appendChild(tile(nm,d,'date'))); wrap.appendChild(grid);
+  }
+}
+function dayHeader(d,cnt){const h=document.createElement('div'); h.className='feed-day-h'; const isT=d===TODAY;
+  h.innerHTML=`<span>${mmdd(d)} (${DOW[parse(d).getDay()]})</span>${isT?'<span class="tag">오늘</span>':''}<span class="cnt">${cnt}명 인증</span>`; return h;}
+function tile(nm,d,capType){const {lvl,img}=dayData(nm,d);
+  const t=document.createElement('div'); t.className='tile';
+  const ph = img ? `<div class="ph hasimg"><img src="${img}"><span class="lvl">${moonChar(lvl)}</span></div>`
+                 : `<div class="ph"><div class="pm">${moonChar(lvl)}</div><div class="pd">${mmdd(d)}</div></div>`;
+  t.innerHTML=ph+`<div class="cap">${capType==='name'?`<b>${nm}</b>`:mmdd(d)}</div>`;
+  t.onclick=()=>openLightbox(nm,d); return t;}
+function openLightbox(nm,d){const {mine:m,lvl,seedImg}=dayData(nm,d); const box=$('lbBox');
+  const item=(label,x)=> x&&x.img ? `<div class="item"><div class="l">${label}</div><img src="${x.img}">${x.note?`<div class="nt">${x.note}</div>`:''}</div>`
+    : `<div class="item"><div class="l">${label}</div><div class="none">○</div></div>`;
+  let inner;
+  if(m) inner=item('🧴 #잘자요루틴', m.product)+item('🌱 #습관만들기', m.habit);
+  else if(seedImg) inner=`<div class="item"><div class="l">인증 사진 (예시)</div><img src="${seedImg}"><div class="nt">시연용 예시 이미지예요. 실제 운영 땐 참여자가 올린 사진이 보입니다.</div></div>`;
+  else inner=`<div class="item"><div class="none">${moonChar(lvl)}</div><div class="nt" style="text-align:center">이 날은 사진 없이 인증으로 기록된 시연 데이터예요.</div></div>`;
+  box.innerHTML=`<h4>${nm} 뚜아님 ${moonChar(lvl)}</h4><div class="d">${d} (${DOW[parse(d).getDay()]})</div>`+inner
+    +`<button class="btn ghost" onclick="closeLightbox()" style="margin-top:4px">닫기</button>`;
+  $('lightbox').classList.add('show');}
+function closeLightbox(){$('lightbox').classList.remove('show');}
+
+// ===== 피드 (SNS 후기 인증) =====
+function renderFeed(){const nm=meName(); feed[nm]=feed[nm]||{}; const F=$('feedBody'); F.innerHTML='';
+  F.innerHTML+=`<div class="feed-guide">📝 <b>올리는 법</b> · 스레드에 글 작성 → <b>@vonnatur 소환</b> → 글 링크 복사 → 아래에 붙여넣고 [인증]<br>(스레드 / 인스타 어디든 OK)</div>`;
+  const sec=(t)=>{const e=document.createElement('div'); e.className='feed-sec'; e.textContent=t; F.appendChild(e);};
+  const item=(it)=>{const done=!!(feed[nm][it.key]); const wrap=document.createElement('div'); wrap.className='feed-item';
+    wrap.innerHTML=`<div class="fi-h"><span class="fi-t">${it.label}</span><span class="fi-st ${done?'ok':''}">${done?'제출 ✓':'미제출'}</span></div>
+      ${it.m?`<div class="fi-m">${it.m}</div>`:''}
+      <div class="fi-tags">${it.tags}</div>
+      <div class="fi-row"><input id="fl_${it.key}" placeholder="https://www.threads.net/..." value="${feed[nm][it.key]||''}"><button data-k="${it.key}">${done?'수정':'인증'}</button></div>`;
+    wrap.querySelector('button').onclick=()=>{const v=document.getElementById('fl_'+it.key).value.trim();
+      if(!v){toast('링크를 붙여넣어 주세요');return;} feed[nm][it.key]=v; save(); toast('피드 인증 완료 🌙'); renderFeed();};
+    F.appendChild(wrap);};
+  sec('① 2주 간격 사용 스토리 (5개)');
+  STORY_MISSIONS.forEach(item);
+  sec('② 제품별 후기 (개수는 추후 조정)');
+  PRODUCT_REVIEWS.forEach(p=>item({key:p.key,label:p.label,m:'제품을 충분히 써보고 솔직한 후기를',tags:'@vonnatur #본나뚜아 '+p.tags}));
+}
+
+// ===== 내 기록 =====
+let galAll=false;
+function renderMe(){const nm=meName();
+  $('meSub').textContent=`${nm} 뚜아님 · ${START} ~ ${addDays(START,totalDays-1)} (8주)`;
+  let cert=0,full=0; pastDates.forEach(d=>{const l=dayData(nm,d).lvl; if(isCert(nm,d))cert++; if(l>=2)full++;});
+  const rate=Math.round(cert/elapsed*100);
+  $('meRate').textContent=rate; $('meRateSub').textContent=`경과 ${elapsed}일 중 ${cert}일 인증 (전체 8주=${totalDays}일)`;
+  $('meTotal').textContent=cert; $('meFull').textContent=full; $('meStreak').textContent=longest(nm)+'일';
+  const cal=$('meCal'); cal.innerHTML='';
+  for(let w=0;w<CFG.weeks;w++){let row=`<div class="cal-row"><span class="wk">${w+1}주</span><div class="days">`;
+    for(let i=0;i<7;i++){const d=addDays(START,w*7+i); const fut=parse(d)>parse(TODAY); const l=dayData(nm,d).lvl;
+      row+=`<span class="m moon ${moonCls(l)}">${fut?'·':moonChar(l)}</span>`;}
+    row+='</div></div>'; cal.innerHTML+=row;}
+  // 갤러리
+  const certDates=pastDates.slice().reverse().filter(d=>isCert(nm,d));
+  const limit=galAll?certDates.length:8;
+  const g=$('meGallery'); g.innerHTML='';
+  certDates.slice(0,limit).forEach(d=>{const {img,lvl}=dayData(nm,d);
+    g.innerHTML+= img?`<div class="ph hasimg"><img src="${img}"></div>`
+      :`<div class="ph"><div class="pm">${moonChar(lvl)}</div><div class="pd">${mmdd(d)}</div></div>`;});
+  if(certDates.length===0) g.innerHTML='<div class="ph"><div class="pm" style="color:var(--ash-soft)">○</div></div>';
+  $('galMore').style.display = certDates.length>8 && !galAll ? 'block':'none';
+  $('galMore').textContent=`더 보기 (총 ${certDates.length}장)`;
+  $('galMore').onclick=()=>{galAll=true; renderMe();};
+  renderCert(nm,rate,certDates);
+}
+function longest(nm){let best=0,cur=0; allDates.forEach(d=>{if(parse(d)>parse(TODAY))return; if(isCert(nm,d)){cur++;best=Math.max(best,cur);}else cur=0;}); return best;}
+function renderCert(nm,rate,certDates){const box=$('meCert'); const pass=rate>=CFG.passRate;
+  // 수료증 사진 스트립 (자신이 올린/예시 사진 중 최대 4장)
+  let strip=''; const imgs=certDates.map(d=>dayData(nm,d).img).filter(Boolean);
+  if(imgs.length) imgs.forEach(im=>{strip+=`<div class="ph hasimg"><img src="${im}"></div>`;});
+  else strip='<div class="ph"><div class="pm" style="color:var(--ash-soft)">○</div></div>';
+  const moonRow=`<div class="moons"><img src="moon_left.png"><img src="moon_bottom.png"><img src="moon_full.png"><img src="moon_right.png"><img src="moon_top.png"></div>`;
+  if(pass){box.innerHTML=`<div class="cert">${moonRow}
+    <h3>[ 찐친 3기 ] 룰러바이 수료증</h3><div class="recv">${nm} 뚜아님</div>
+    <div class="body">8주간 매일 자신을 돌보는 의식을 지켜낸<br>당신의 꾸준함에 감탄하고 응원합니다.<br>현재 인증률 <b>${rate}%</b> · 이 페이스면 수료할 수 있어요 🌙</div>
+    <div class="cgal">${strip}</div>
+    <img class="signlogo" src="logo_2line.png" alt="VONNATUR · My healing skin sleep therapy">
+    <div class="sign">잘자고 일어난 피부의 비밀 · 본나뚜아</div></div>`;}
+  else{box.innerHTML=`<div class="cert locked">${moonRow}
+    <h3 style="color:var(--ash)">[ 찐친 3기 ] 룰러바이 수료증</h3>
+    <div class="lockmsg">8주 완주 시 발급돼요.<br>수료 기준 ${CFG.passRate}%까지 조금만 더! 🌙</div>
+    <div class="cgal">${strip}</div></div>`;}
+}
+
+// ===== 운영자 리포트 (주차 이동) =====
+let repWeek=Math.max(1,curWeek-1);
+function renderReport(){
+  const ws=addDays(START,(repWeek-1)*7), we=addDays(ws,6);
+  $('repWk').textContent=`${repWeek}주차 · ${mmdd(ws)} ~ ${mmdd(we)}`;
+  $('repPrev').disabled = repWeek<=1; $('repNext').disabled = repWeek>=curWeek;
+  const rows=PEOPLE.map(([nm])=>{let c=0,full=0; for(let i=0;i<7;i++){const d=addDays(ws,i); if(parse(d)>parse(TODAY))continue; if(isCert(nm,d))c++; if(dayData(nm,d).lvl>=2)full++;}
+    let pc=0; if(repWeek>1){const ps=addDays(START,(repWeek-2)*7); for(let i=0;i<7;i++) if(isCert(nm,addDays(ps,i)))pc++;}
+    return {nm,c,full,pc};}).sort((a,b)=>b.c-a.c||b.full-a.full);
+  const avg=Math.round(rows.reduce((s,r)=>s+r.c,0)/rows.length/7*100);
+  $('repAvg').textContent=`전체 평균 인증률 ${avg}%`; $('repDelta').textContent='자동 집계 결과';
+  const rc=$('repRows'); rc.innerHTML='';
+  rows.forEach(r=>{let moons=''; for(let i=0;i<7;i++){const d=addDays(ws,i); const fut=parse(d)>parse(TODAY); const l=dayData(r.nm,d).lvl; moons+=`<span class="moon ${moonCls(l)}">${fut?'·':moonChar(l)}</span>`;}
+    const flag=r.c<=2?'⚠️':(r.full===7?'🔥':'');
+    rc.innerHTML+=`<div class="rep-row"><span class="nm">${r.nm}</span><span class="ms">${moons}</span><span class="cnt">${r.c}/7</span><span class="flag">${flag}</span></div>`;});
+  const perfect=rows.filter(r=>r.full===7).map(r=>r.nm);
+  const grown=rows.filter(r=>r.c-r.pc>=2).sort((a,b)=>(b.c-b.pc)-(a.c-a.pc))[0];
+  const cheer=rows.filter(r=>r.c<=2).map(r=>r.nm);
+  let praise=`· 개근상(매일 두 컷): <b>${perfect.join(', ')||'-'}</b><br>`;
+  if(grown)praise+=`· 가장 많이 성장: <b>${grown.nm}</b> (${grown.pc}일 → ${grown.c}일)<br>`;
+  if(cheer.length)praise+=`· 응원이 필요해요: <b>${cheer.join(', ')}</b>`;
+  $('repPraise').innerHTML=praise;
+  let txt=`🌿 본나뚜아 찐친 3기 · ${repWeek}주차 리포트\n${ws} ~ ${we}\n\n[이번 주 인증 현황]  (●두컷 ◐한컷)\n`;
+  rows.forEach(r=>{let m=''; for(let i=0;i<7;i++){const d=addDays(ws,i); m+= parse(d)>parse(TODAY)?'·':moonChar(dayData(r.nm,d).lvl);} txt+=`${r.nm}  ${m}  ${r.c}/7\n`;});
+  txt+=`\n📊 전체 평균 인증률 ${avg}%\n\n🏆 개근상: ${perfect.join(', ')||'-'}\n`;
+  if(grown)txt+=`🌱 가장 많이 성장: ${grown.nm}\n`;
+  const nextM=MISSIONS[Math.min(repWeek,MISSIONS.length-1)];
+  txt+=`\n🎯 ${repWeek+1}주차 미션\n"${nextM}"\n\n몸도 마음도 피부도 잘자요 🌙`;
+  $('repCopy').textContent=txt;
+  $('copyBtn').onclick=()=>{navigator.clipboard?.writeText(txt); toast('카톡 복붙용 텍스트를 복사했어요');};
+}
+$('repPrev').onclick=()=>{if(repWeek>1){repWeek--; renderReport();}};
+$('repNext').onclick=()=>{if(repWeek<curWeek){repWeek++; renderReport();}};
+
+let toTimer;
+function toast(m){const t=$('toast'); t.textContent=m; t.classList.add('show'); clearTimeout(toTimer); toTimer=setTimeout(()=>t.classList.remove('show'),2200);}
+$('lightbox').onclick=e=>{if(e.target.id==='lightbox')closeLightbox();};
+$('pinModal').onclick=e=>{if(e.target.id==='pinModal')closePin();};
+buildLogin();
+</script>
+</body>
+</html>
