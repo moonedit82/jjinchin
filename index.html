@@ -461,14 +461,16 @@ function addDays(s,n){const d=parse(s);d.setDate(d.getDate()+n);return fmt(d);}
 function mmdd(s){const[,m,d]=s.split('-');return (+m)+'/'+(+d);}
 
 const START = CFG.start;
+const END = addDays(START, CFG.weeks*7-1);
 const _realToday = fmt(new Date());
-// 시작 전이면 1일차처럼, 종료 후엔 마지막 날로 클램프
-const TODAY = _realToday < START ? START : (_realToday > addDays(START, CFG.weeks*7-1) ? addDays(START, CFG.weeks*7-1) : _realToday);
+// 워밍업/베타 기간(시작 전) 처리: 6/1부터 사용 가능, 본격 집계는 START(6/8)부터
+const TODAY = _realToday > END ? END : _realToday;
+const beforeStart = _realToday < START;
 const totalDays = CFG.weeks*7;
-const elapsed = Math.min(totalDays, Math.max(1, Math.round((parse(TODAY)-parse(START))/dayMs)+1));
-const curWeek = Math.floor((elapsed-1)/7)+1;
+const elapsed = beforeStart ? 0 : Math.min(totalDays, Math.round((parse(TODAY)-parse(START))/dayMs)+1);
+const curWeek = beforeStart ? 1 : Math.floor((elapsed-1)/7)+1;
 const allDates = Array.from({length:totalDays}, (_,i)=>addDays(START,i));
-const pastDates = allDates.filter(d=>parse(d)<=parse(TODAY));
+const pastDates = beforeStart ? [] : allDates.filter(d=>parse(d)<=parse(TODAY));
 
 // ===== 인메모리 캐시 (Supabase에서 불러온 데이터 보관) =====
 let MEMBERS = [];   // [{id, name, pin, is_admin, habit, sort_order, created_at}]
@@ -628,13 +630,19 @@ function compressImage(file, maxDim, q){
 let pendP = null, pendH = null;   // {full:Blob, thumb:Blob, preview:ObjectURL}
 function renderToday(){
   const m = user; if(!m) return;
-  $('todaySub').textContent = curWeek+'주차 · '+DOW[parse(TODAY).getDay()]+'요일 ('+mmdd(TODAY)+')';
+  if(beforeStart){
+    const dToStart = Math.round((parse(START)-parse(TODAY))/dayMs);
+    $('todaySub').textContent = '워밍업·베타 · 본격 시작 '+mmdd(START)+' (D-'+dToStart+')';
+  } else {
+    $('todaySub').textContent = curWeek+'주차 · '+DOW[parse(TODAY).getDay()]+'요일 ('+mmdd(TODAY)+')';
+  }
   const d = dayData(m.id, TODAY);
   $('todayMoon').textContent = moonChar(d.lvl);
-  $('todayLabel').textContent = d.lvl>=2 ? '오늘 인증 완성! 잘했어요 🌙'
+  $('todayLabel').textContent = beforeStart ? '워밍업 기간 — 인증 흐름을 자유롭게 테스트해보세요 🌱'
+                              : d.lvl>=2 ? '오늘 인증 완성! 잘했어요 🌙'
                               : d.lvl>=1 ? '절반 완성 ◐ — 한 컷만 더 올리면 보름달!'
                                          : '아직 오늘 인증 전이에요';
-  $('todayDate').textContent = TODAY+' · 자정 전까지 인정';
+  $('todayDate').textContent = beforeStart ? (TODAY+' · 본격 집계는 '+START+'부터') : (TODAY+' · 자정 전까지 인정');
   const wkStart = addDays(START, (curWeek-1)*7);
   const strip = $('weekStrip'); strip.innerHTML = '';
   for(let i=0;i<7;i++){
@@ -648,7 +656,7 @@ function renderToday(){
   let cc=0; pastDates.forEach(dt=>{if(isCert(m.id, dt)) cc++;});
   $('stRate').textContent = Math.round(wc/Math.max(1,ewk)*100)+'%';
   $('stRateSub').textContent = '전체 '+Math.round(cc/Math.max(1,elapsed)*100)+'%';
-  $('missionText').textContent = MISSIONS[Math.min(curWeek-1, MISSIONS.length-1)];
+  $('missionText').textContent = beforeStart ? '시작 미션 — 8주간 만들 내 습관 한 줄을 정해보세요 🌱' : MISSIONS[Math.min(curWeek-1, MISSIONS.length-1)];
   $('myHabit').innerHTML = m.habit ? '내 습관: <b>'+escapeHtml(m.habit)+'</b> 인증 컷' : '내 습관 인증 컷';
   slotState('P', $('stP'), $('prevP'), $('pickP'), d.p1_url, d.p1_thumb, pendP);
   slotState('H', $('stH'), $('prevH'), $('pickH'), d.p2_url, d.p2_thumb, pendH);
