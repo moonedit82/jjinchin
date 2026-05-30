@@ -378,6 +378,10 @@
       </div>
       <div class="copybox" id="repCopy"></div>
     </div>
+    <div class="card">
+      <div style="font-size:14px;font-weight:600;margin-bottom:10px;letter-spacing:-.3px">📌 피드 인증 현황 (전체)</div>
+      <div id="repFeed"></div>
+    </div>
     <div class="closing">기록은 Supabase에 저장돼요 · ◀▶로 지난 주차도 볼 수 있어요</div>
   </section>
 
@@ -973,6 +977,30 @@ function renderReport(){
     if(navigator.clipboard) navigator.clipboard.writeText(txt);
     toast('카톡 복붙용 텍스트를 복사했어요');
   };
+
+  // ===== 피드 인증 현황 — 미션별 그룹 (운영자가 스레드 링크 확인) =====
+  const allMi = [
+    ...STORY_MISSIONS.map(s=>({key:s.key, label:s.label, type:'story'})),
+    ...PRODUCT_REVIEWS.map(p=>({key:p.key, label:p.label+' (제품 후기)', type:'product'}))
+  ];
+  let fh = '';
+  allMi.forEach(mi=>{
+    const subs = [];
+    Object.entries(FEED).forEach(([mid, missions])=>{
+      if(missions[mi.key]){
+        const mem = findMemberById(parseInt(mid));
+        if(mem && !mem.is_admin) subs.push({name:mem.name, link:missions[mi.key]});
+      }
+    });
+    if(subs.length>0){
+      fh += '<div style="margin-bottom:14px"><div style="font-size:13px;font-weight:600;margin-bottom:6px">'+escapeHtml(mi.label)+' <span style="color:var(--ash);font-weight:400">· '+subs.length+'명 제출</span></div>';
+      subs.forEach(s=>{
+        fh += '<div style="font-size:12px;margin-top:5px;padding-left:6px;line-height:1.5"><span style="color:var(--ink);font-weight:600">'+escapeHtml(s.name)+'</span> — <a href="'+escapeAttr(s.link)+'" target="_blank" rel="noopener" style="color:var(--accent);word-break:break-all">'+escapeHtml(s.link)+'</a></div>';
+      });
+      fh += '</div>';
+    }
+  });
+  $('repFeed').innerHTML = fh || '<p style="color:var(--ash);font-size:13px;text-align:center;padding:14px 0">아직 제출된 피드 인증이 없어요</p>';
 }
 $('repPrev').onclick = ()=>{if(repWeek>1){repWeek--; renderReport();}};
 $('repNext').onclick = ()=>{if(repWeek<curWeek){repWeek++; renderReport();}};
