@@ -824,7 +824,7 @@ function closeLightbox(){$('lightbox').classList.remove('show');}
 function renderFeed(){
   const m = user; if(!m) return;
   const F = $('feedBody'); F.innerHTML = '';
-  F.innerHTML += '<div class="feed-guide">📝 <b>올리는 법</b> · 스레드에 글 작성 → <b>@vonnatur 소환</b> → 글 링크 복사 → 아래에 붙여넣고 [인증]<br>(스레드 / 인스타 어디든 OK)</div>';
+  F.innerHTML += '<div class="feed-guide">📝 <b>올리는 법</b> · 스레드에 글 작성 → <b>@vonnatur 소환</b> → 글 링크 복사 → 아래에 붙여넣고 [인증]<br>(스레드 / 인스타 어디든 OK)<br>🛍️ <b>본나뚜아 자사몰</b> · <a href="https://www.vonnatur.co.kr" target="_blank" rel="noopener" style="color:var(--accent);font-weight:600">www.vonnatur.co.kr</a></div>';
   const userFeed = FEED[m.id] || {};
   const sec = (t)=>{const e=document.createElement('div'); e.className='feed-sec'; e.textContent = t; F.appendChild(e);};
   const item = (it)=>{
