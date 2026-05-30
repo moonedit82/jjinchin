@@ -1,0 +1,18 @@
+{
+  "name": "본나뚜아 찐친 챌린지 3기",
+  "short_name": "찐친 3기",
+  "description": "매일 두 컷으로 채우는 나만의 룰러바이 🌙",
+  "id": "vonnatur-jjinchin-3",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f5f5f7",
+  "theme_color": "#5645d4",
+  "lang": "ko",
+  "categories": ["lifestyle", "health"],
+  "icons": [
+    {"src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable"},
+    {"src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable"}
+  ]
+}
