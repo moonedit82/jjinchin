@@ -510,7 +510,7 @@ function dayData(mid, date){
 }
 function isCert(mid, d){const l=dayData(mid,d).lvl; return COUNT_FULL_ONLY ? l>=2 : l>=1;}
 function findMemberById(id){return MEMBERS.find(m=>m.id===id);}
-function memberList(){return MEMBERS.filter(m=>!m.is_admin);}
+function memberList(){return MEMBERS.filter(m=>!m.is_admin && !/^멤버\d+$/.test(m.name));}
 function adminMember(){return MEMBERS.find(m=>m.is_admin);}
 
 // ===== 입장 + 비밀번호 =====
@@ -853,7 +853,7 @@ function renderFeed(){
   };
   sec('① 2주 간격 사용 스토리 (5개)');
   STORY_MISSIONS.forEach(item);
-  sec('② 제품별 후기 (개수는 추후 조정)');
+  sec('② 제품별 후기');
   PRODUCT_REVIEWS.forEach(p=>item({key:p.key, label:p.label, m:'제품을 충분히 써보고 솔직한 후기를', tags:'@vonnatur #본나뚜아 '+p.tags}));
 }
 
