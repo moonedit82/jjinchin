@@ -434,21 +434,21 @@ const CFG = { start:'2026-06-08', weeks:8, passRate:80 };
 const COUNT_FULL_ONLY = false;
 const DOW = ['일','월','화','수','목','금','토'];
 const MISSIONS = [
-  '루틴 고정 — 내 스킨케어 시간 정하고, 인증샷에 시계/폰시계 함께 ⏱️',
-  '속도 습관 — 세안 후 1분 안에 바르기, 타이머와 함께 ⏱️',
-  'Before 기록 — 맨얼굴 클로즈업 1컷 (변화의 기준점)',
-  '중간 점검 — 중간설문 + "요즘 내 피부 한 줄 일기"',
-  '루틴 심화 — 아침·저녁 2회 인증 도전 (1회도 OK)',
-  '추천 — 내 찐친템 한마디 추천 + 사용 컷',
+  '루틴 고정 — 이번 주 내 스킨케어 및 인증 타임 정하기, 인증컷에 시계도 함께 ⏱️',
+  'Before 기록 — 시작 시점 내 피부 한 컷 (8주 뒤 비교할 기준점) 📸',
+  '속도 습관 — 세안 직후 토너 단계는 알로에 수딩젤로! 빠른 진정 ⏱️',
+  '중간 점검 — 중간설문 + 요즘 내 피부 한 줄 일기 · <a href="https://forms.gle/bxExZYWF8HCfqtuu6" target="_blank" rel="noopener" style="color:var(--accent);font-weight:600">중간설문 열기 →</a>',
+  '나만의 활용법 — 내가 찾은 본나뚜아 사용법, 인증컷에 살짝 코멘트로 ✨',
+  '추천 — 가장 손이 자주 가는 본나뚜아 제품 한 컷 💜',
   '스토리 — 8주 중 가장 좋았던 변화 사진 + 코멘트',
-  '마무리 — 마무리설문 + Before/After 비교샷 + 오프미팅 🌿',
+  '마무리 — 마무리설문 + 8주간의 경험 나누기 · <a href="https://forms.gle/UEjxYFuiTHQgDu8bA" target="_blank" rel="noopener" style="color:var(--accent);font-weight:600">마무리설문 열기 →</a>',
 ];
 const STORY_MISSIONS = [
-  {key:'unbox', label:'언박싱 (시작)', m:'첫인상 미션 — 웰컴키트 개봉 컷 + 가장 끌리는 제품 하나와 그 이유를 스레드에', tags:'@vonnatur #본나뚜아 #본나뚜아찐친3기 #0주사용후기'},
-  {key:'w2', label:'2주차', m:'첫 변화 미션 — 2주 루틴 후 가장 먼저 느낀 피부 변화 한 가지 + 사용 컷', tags:'@vonnatur #본나뚜아찐친3기 #2주사용후기'},
-  {key:'w4', label:'4주차', m:'비교 미션 — 시작 전 vs 지금, 달라진 점 (사진·표현 자유)', tags:'@vonnatur #본나뚜아찐친3기 #4주사용후기'},
-  {key:'w6', label:'6주차', m:'추천 미션 — 내 최애템과 "이런 분께 추천" 한마디', tags:'@vonnatur #본나뚜아찐친3기 #6주사용후기'},
-  {key:'w8', label:'8주차', m:'완주 스토리 미션 — 8주 여정 요약 + Before/After', tags:'@vonnatur #본나뚜아찐친3기 #8주사용후기'},
+  {key:'unbox', label:'언박싱 (시작)', m:'첫인상 — 웰컴키트 개봉 컷 + 가장 기대되는 점과 그 이유', tags:'@vonnatur #본나뚜아 #본나뚜아찐친3기 #0주사용후기 #기대평'},
+  {key:'w2', label:'2주차', m:'첫 변화 — 2주 루틴 후 가장 먼저 느낀 피부 변화 한 가지 + 사용 컷', tags:'@vonnatur #본나뚜아찐친3기 #2주사용후기'},
+  {key:'w4', label:'4주차', m:'나만의 활용법 — 본나뚜아를 어떻게 활용하시나요? (섞어 바르기·사용 순서·시간대 등)', tags:'@vonnatur #나만의활용법 #본나뚜아찐친3기 #4주사용후기'},
+  {key:'w6', label:'6주차', m:'추천 — 본나뚜아 제품 중 "이런 분께 추천" 해주세요', tags:'@vonnatur #본나뚜아찐친3기 #6주사용후기'},
+  {key:'w8', label:'8주차', m:'완주 스토리 — 8주 여정 요약 + Before/After', tags:'@vonnatur #본나뚜아찐친3기 #8주사용후기'},
 ];
 const PRODUCT_REVIEWS = [
   {key:'p1', label:'잘자요 수분크림', tags:'#잘자요수분크림'},
@@ -660,7 +660,7 @@ function renderToday(){
   let cc=0; pastDates.forEach(dt=>{if(isCert(m.id, dt)) cc++;});
   $('stRate').textContent = Math.round(wc/Math.max(1,ewk)*100)+'%';
   $('stRateSub').textContent = '전체 '+Math.round(cc/Math.max(1,elapsed)*100)+'%';
-  $('missionText').textContent = beforeStart ? '시작 미션 — 8주간 만들 내 습관 한 줄을 정해보세요 🌱' : MISSIONS[Math.min(curWeek-1, MISSIONS.length-1)];
+  $('missionText').innerHTML = beforeStart ? '시작 미션 — 8주간 만들 내 습관 한 줄을 정해보세요 🌱' : MISSIONS[Math.min(curWeek-1, MISSIONS.length-1)];
   $('myHabit').innerHTML = m.habit ? '내 습관: <b>'+escapeHtml(m.habit)+'</b> 인증 컷' : '내 습관 인증 컷';
   slotState('P', $('stP'), $('prevP'), $('pickP'), d.p1_url, d.p1_thumb, pendP);
   slotState('H', $('stH'), $('prevH'), $('pickH'), d.p2_url, d.p2_thumb, pendH);
