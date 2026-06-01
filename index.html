@@ -242,7 +242,8 @@
   nav.tabs button.on .tlab{font-weight:600; color:var(--accent)}
 
   .toast{position:fixed; left:50%; bottom:96px; transform:translateX(-50%) translateY(20px); opacity:0;
-    background:var(--ink); color:#fff; font-size:14px; padding:12px 20px; border-radius:9999px; z-index:95; transition:.3s; pointer-events:none}
+    background:var(--ink); color:#fff; font-size:13px; padding:12px 18px; border-radius:18px; z-index:95; transition:.3s; pointer-events:none;
+    max-width:90%; line-height:1.5; text-align:center; word-break:break-word}
   .toast.show{opacity:1; transform:translateX(-50%) translateY(0)}
 </style>
 </head>
@@ -714,31 +715,48 @@ $('submitBtn').onclick = async ()=>{
   const m = user; if(!m) return;
   if(!pendP && !pendH) return;
   const btn = $('submitBtn'); btn.disabled = true; btn.textContent = '올리는 중…';
-  try{
-    const existing = (CERTS[m.id] && CERTS[m.id][TODAY]) || {member_id:m.id, cdate:TODAY};
-    const row = {...existing};
-    const ts = Date.now();
-    if(pendP){
-      row.p1_url   = await sbUpload(m.id+'/'+TODAY+'_p1_'+ts+'.jpg',   pendP.full);
-      row.p1_thumb = await sbUpload(m.id+'/'+TODAY+'_p1_'+ts+'_t.jpg', pendP.thumb);
+  const existing = (CERTS[m.id] && CERTS[m.id][TODAY]) || {member_id:m.id, cdate:TODAY};
+  const row = {...existing};
+  const ts = Date.now();
+  const errs = [];
+  let anySuccess = false;
+  async function uploadSlot(prefix, pend){
+    try{
+      const full = await sbUpload(m.id+'/'+TODAY+'_'+prefix+'_'+ts+'.jpg', pend.full);
+      let thumb;
+      try{ thumb = await sbUpload(m.id+'/'+TODAY+'_'+prefix+'_'+ts+'_t.jpg', pend.thumb); }
+      catch(e){ console.warn(prefix+' thumb fallback', e); thumb = full; }
+      return {full, thumb};
+    }catch(e){ console.error(prefix+' upload failed', e); errs.push(e.message||'unknown'); return null; }
+  }
+  if(pendP){
+    const r = await uploadSlot('p1', pendP);
+    if(r){ row.p1_url = r.full; row.p1_thumb = r.thumb; anySuccess = true; if(pendP.preview) URL.revokeObjectURL(pendP.preview); pendP = null; }
+  }
+  if(pendH){
+    const r = await uploadSlot('p2', pendH);
+    if(r){ row.p2_url = r.full; row.p2_thumb = r.thumb; anySuccess = true; if(pendH.preview) URL.revokeObjectURL(pendH.preview); pendH = null; }
+  }
+  if(anySuccess){
+    try{
+      row.updated_at = new Date().toISOString();
+      await sbReq('POST', 'certs', row, {'Prefer':'resolution=merge-duplicates,return=representation'});
+      CERTS[m.id] = CERTS[m.id] || {}; CERTS[m.id][TODAY] = row;
+    }catch(e){
+      console.error('certs upsert failed', e);
+      errs.push('저장 실패: ' + ((e.message||'').slice(0,60)));
     }
-    if(pendH){
-      row.p2_url   = await sbUpload(m.id+'/'+TODAY+'_p2_'+ts+'.jpg',   pendH.full);
-      row.p2_thumb = await sbUpload(m.id+'/'+TODAY+'_p2_'+ts+'_t.jpg', pendH.thumb);
-    }
-    row.updated_at = new Date().toISOString();
-    await sbReq('POST', 'certs', row, {'Prefer':'resolution=merge-duplicates,return=representation'});
-    CERTS[m.id] = CERTS[m.id] || {}; CERTS[m.id][TODAY] = row;
-    if(pendP && pendP.preview) URL.revokeObjectURL(pendP.preview);
-    if(pendH && pendH.preview) URL.revokeObjectURL(pendH.preview);
-    pendP = null; pendH = null;
+  }
+  if(errs.length === 0){
     const lvl = dayData(m.id, TODAY).lvl;
     toast(lvl>=2 ? '오늘 인증 완성! 🌙 잘했어요' : '한 컷 인증 완료 ◐ — 한 컷 더 채워봐요!');
-    renderToday();
-  }catch(err){
-    console.error(err); toast('업로드 실패. 인터넷 확인 후 다시 시도');
-    $('submitBtn').disabled = false; $('submitBtn').textContent = '오늘 인증 올리기';
+  }else if(anySuccess){
+    toast('일부만 완료 · 한 컷 실패: ' + errs[0].slice(0, 90), 5000);
+  }else{
+    toast('업로드 실패: ' + errs[0].slice(0, 100), 5000);
   }
+  $('submitBtn').disabled = false; $('submitBtn').textContent = '오늘 인증 올리기';
+  renderToday();
 };
 function streak(mid){
   let d = isCert(mid, TODAY) ? TODAY : addDays(TODAY,-1);
@@ -1007,9 +1025,9 @@ $('repNext').onclick = ()=>{if(repWeek<curWeek){repWeek++; renderReport();}};
 
 // ===== 잡유틸 =====
 let toTimer;
-function toast(msg){
+function toast(msg, dur){
   const t = $('toast'); t.textContent = msg; t.classList.add('show');
-  clearTimeout(toTimer); toTimer = setTimeout(()=>t.classList.remove('show'), 2400);
+  clearTimeout(toTimer); toTimer = setTimeout(()=>t.classList.remove('show'), dur || 2400);
 }
 function escapeHtml(s){return (s==null?'':String(s)).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
 function escapeAttr(s){return escapeHtml(s).replace(/'/g, '&#39;');}
