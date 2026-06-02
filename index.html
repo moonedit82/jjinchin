@@ -740,7 +740,7 @@ $('submitBtn').onclick = async ()=>{
   if(anySuccess){
     try{
       row.updated_at = new Date().toISOString();
-      await sbReq('POST', 'certs', row, {'Prefer':'resolution=merge-duplicates,return=representation'});
+      await sbReq('POST', 'certs?on_conflict=member_id,cdate', row, {'Prefer':'resolution=merge-duplicates,return=representation'});
       CERTS[m.id] = CERTS[m.id] || {}; CERTS[m.id][TODAY] = row;
     }catch(e){
       console.error('certs upsert failed', e);
