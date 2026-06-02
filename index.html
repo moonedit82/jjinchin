@@ -476,6 +476,9 @@ const elapsed = beforeStart ? 0 : Math.min(totalDays, Math.round((parse(TODAY)-p
 const curWeek = beforeStart ? 1 : Math.floor((elapsed-1)/7)+1;
 const allDates = Array.from({length:totalDays}, (_,i)=>addDays(START,i));
 const pastDates = beforeStart ? [] : allDates.filter(d=>parse(d)<=parse(TODAY));
+// 보드/갤러리 노출용 — 워밍업 베타(6/1~)부터 오늘까지 (공식 집계는 별개)
+const WARMUP_START = '2026-06-01';
+const boardDates = (()=>{ const arr=[]; let d=WARMUP_START; while(parse(d)<=parse(TODAY)){arr.push(d); d=addDays(d,1);} return arr; })();
 
 // ===== 인메모리 캐시 (Supabase에서 불러온 데이터 보관) =====
 let MEMBERS = [];   // [{id, name, pin, is_admin, habit, sort_order, created_at}]
@@ -771,16 +774,22 @@ function renderWall(){
   const bar = $('nameBar'); bar.innerHTML = '';
   const all = document.createElement('button'); all.textContent = '전체'; all.className = 'all'+(wallFilter==='전체'?' on':'');
   all.onclick = ()=>{wallFilter='전체'; renderWall();}; bar.appendChild(all);
+  const wallCountDates = beforeStart ? boardDates : pastDates;
   memberList().forEach(m=>{
-    let c=0; pastDates.forEach(d=>{if(isCert(m.id, d)) c++;});
+    let c=0; wallCountDates.forEach(d=>{if(isCert(m.id, d)) c++;});
     const b = document.createElement('button'); b.innerHTML = escapeHtml(m.name)+'<span class="mn">'+c+'</span>';
     if(wallFilter===m.name) b.classList.add('on');
     b.onclick = ()=>{wallFilter = m.name; renderWall();}; bar.appendChild(b);
   });
   const wrap = $('wallFeed'); wrap.innerHTML = '';
   if(wallFilter==='전체'){
-    const wkStart = addDays(START, (curWeek-1)*7);
-    const dates = pastDates.slice().reverse().filter(d=> wallShowAll || parse(d) >= parse(wkStart));
+    let dates;
+    if(beforeStart){
+      dates = boardDates.slice().reverse();
+    } else {
+      const wkStart = addDays(START, (curWeek-1)*7);
+      dates = pastDates.slice().reverse().filter(d=> wallShowAll || parse(d) >= parse(wkStart));
+    }
     let any = false;
     dates.forEach(d=>{
       const people = memberList().filter(m=>isCert(m.id, d));
@@ -794,13 +803,14 @@ function renderWall(){
     if(!any){
       wrap.innerHTML += '<p class="sub" style="text-align:center;margin-top:24px">아직 이번 주 인증이 없어요.<br>첫 인증을 올려보세요 🌙</p>';
     }
-    if(!wallShowAll){
+    if(!beforeStart && !wallShowAll){
       const more = document.createElement('button'); more.className = 'more-btn'; more.textContent = '이전 주차 더 보기';
       more.onclick = ()=>{wallShowAll = true; renderWall();}; wrap.appendChild(more);
     }
   }else{
     const m = memberList().find(x=>x.name===wallFilter); if(!m) return;
-    const dates = pastDates.filter(d=>isCert(m.id, d)).reverse();
+    const wfDates = beforeStart ? boardDates : pastDates;
+    const dates = wfDates.filter(d=>isCert(m.id, d)).reverse();
     const h = document.createElement('div'); h.className = 'feed-day-h';
     h.innerHTML = '<span>'+escapeHtml(m.name)+' 뚜아님</span><span class="cnt">'+dates.length+'일 인증</span>';
     wrap.appendChild(h);
@@ -895,7 +905,8 @@ function renderMe(){
     }
     row += '</div></div>'; cal.innerHTML += row;
   }
-  const certDates = pastDates.slice().reverse().filter(d=>isCert(m.id, d));
+  const galleryDates = beforeStart ? boardDates : pastDates;
+  const certDates = galleryDates.slice().reverse().filter(d=>isCert(m.id, d));
   const limit = galAll ? certDates.length : 8;
   const g = $('meGallery'); g.innerHTML = '';
   certDates.slice(0, limit).forEach(d=>{
