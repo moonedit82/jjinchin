@@ -491,7 +491,7 @@ const $ = id => document.getElementById(id);
 
 async function loadAll(){
   const [mem, cert, fd] = await Promise.all([
-    sbReq('GET', 'members?select=*&order=sort_order'),
+    sbReq('GET', 'members?select=id,name,is_admin,habit,sort_order,pin_set,created_at&order=sort_order'),
     sbReq('GET', 'certs?select=member_id,cdate,p1_url,p1_thumb,p2_url,p2_thumb,updated_at'),
     sbReq('GET', 'feed?select=member_id,mission_key,link,created_at&order=created_at.desc'),
   ]);
@@ -533,7 +533,7 @@ function openPin(m){
   const admin = !!m.is_admin;
   const len = admin ? 4 : 2;
   const box = $('pinBox');
-  const exists = !!m.pin;
+  const exists = !!m.pin_set;
   if(!exists){
     box.innerHTML = '<h3>'+(admin?'운영자 설정':escapeHtml(m.name)+' 뚜아님, 환영해요!')+'</h3>'+
       '<p>'+(admin?'운영자 비밀번호 4자리를 정해주세요':'처음 오셨네요 🌙 비밀번호 '+len+'자리를 정하고, 이번 기수에 만들 내 습관도 적어주세요')+'</p>'+
@@ -552,9 +552,12 @@ function openPin(m){
       }
       $('pinGo').disabled = true; $('pinErr').textContent = '저장 중…';
       try{
-        const patch = {pin:v}; if(habit) patch.habit = habit;
-        await sbReq('PATCH', 'members?id=eq.'+m.id, patch);
-        m.pin = v; if(habit) m.habit = habit;
+        const res = await sbReq('POST', 'rpc/set_member_pin', {p_id: m.id, p_pin: v, p_habit: habit});
+        if(!res || !res.ok){
+          $('pinErr').textContent = (res && res.reason==='already_set') ? '이미 설정된 PIN이에요. 운영자에게 초기화 요청해주세요' : '저장 실패. 다시 시도해주세요';
+          $('pinGo').disabled = false; return;
+        }
+        m.pin_set = true; if(habit) m.habit = habit;
         closePin(); enter(m);
       }catch(err){
         console.error(err); $('pinErr').textContent='저장 실패. 인터넷 확인 후 다시 시도해주세요'; $('pinGo').disabled = false;
@@ -567,10 +570,21 @@ function openPin(m){
       '<div class="err" id="pinErr"></div>'+
       '<button class="btn" id="pinGo">입장</button>'+
       '<button class="btn ghost" id="pinCancel" style="margin-top:8px">취소</button>';
-    $('pinGo').onclick = ()=>{
+    $('pinGo').onclick = async ()=>{
       const v = $('pinA').value.trim();
-      if(v !== m.pin){$('pinErr').textContent='비밀번호가 달라요'; $('pinA').value=''; return;}
-      closePin(); enter(m);
+      $('pinGo').disabled = true; $('pinErr').textContent='확인 중…';
+      try{
+        const res = await sbReq('POST', 'rpc/verify_member_pin', {p_id: m.id, p_pin: v});
+        if(!res || !res.ok){
+          $('pinErr').textContent='비밀번호가 달라요'; $('pinA').value='';
+          $('pinGo').disabled = false; return;
+        }
+        if(res.habit !== undefined && res.habit !== null) m.habit = res.habit;
+        closePin(); enter(m);
+      }catch(err){
+        console.error(err); $('pinErr').textContent='연결 실패. 다시 시도';
+        $('pinGo').disabled = false;
+      }
     };
   }
   $('pinCancel').onclick = closePin;
@@ -1056,7 +1070,7 @@ $('pinModal').onclick = e=>{if(e.target.id==='pinModal') closePin();};
     let session = null; try{session = JSON.parse(localStorage.getItem(LS_SESSION)||'null');}catch(e){}
     if(session && session.id){
       const m = findMemberById(session.id);
-      if(m && m.pin) enter(m);
+      if(m && m.pin_set) enter(m);
     }
   }catch(err){
     console.error(err);
