@@ -788,7 +788,8 @@ function renderWall(){
   const bar = $('nameBar'); bar.innerHTML = '';
   const all = document.createElement('button'); all.textContent = '전체'; all.className = 'all'+(wallFilter==='전체'?' on':'');
   all.onclick = ()=>{wallFilter='전체'; renderWall();}; bar.appendChild(all);
-  const wallCountDates = beforeStart ? boardDates : pastDates;
+  // 보드 카운트는 워밍업 포함 (실제 화면에 보이는 인증 수와 일치)
+  const wallCountDates = boardDates;
   memberList().forEach(m=>{
     let c=0; wallCountDates.forEach(d=>{if(isCert(m.id, d)) c++;});
     const b = document.createElement('button'); b.innerHTML = escapeHtml(m.name)+'<span class="mn">'+c+'</span>';
@@ -800,9 +801,13 @@ function renderWall(){
     let dates;
     if(beforeStart){
       dates = boardDates.slice().reverse();
+    } else if(wallShowAll){
+      // 더 보기: 워밍업(6/1~7) 포함 전체 인증일 노출
+      dates = boardDates.slice().reverse();
     } else {
+      // 기본: 이번 주만 (공식 챌린지 주차 기준)
       const wkStart = addDays(START, (curWeek-1)*7);
-      dates = pastDates.slice().reverse().filter(d=> wallShowAll || parse(d) >= parse(wkStart));
+      dates = pastDates.slice().reverse().filter(d=> parse(d) >= parse(wkStart));
     }
     let any = false;
     dates.forEach(d=>{
@@ -818,13 +823,13 @@ function renderWall(){
       wrap.innerHTML += '<p class="sub" style="text-align:center;margin-top:24px">아직 이번 주 인증이 없어요.<br>첫 인증을 올려보세요 🌙</p>';
     }
     if(!beforeStart && !wallShowAll){
-      const more = document.createElement('button'); more.className = 'more-btn'; more.textContent = '이전 주차 더 보기';
+      const more = document.createElement('button'); more.className = 'more-btn'; more.textContent = '이전 인증 더 보기 (워밍업 포함)';
       more.onclick = ()=>{wallShowAll = true; renderWall();}; wrap.appendChild(more);
     }
   }else{
     const m = memberList().find(x=>x.name===wallFilter); if(!m) return;
-    const wfDates = beforeStart ? boardDates : pastDates;
-    const dates = wfDates.filter(d=>isCert(m.id, d)).reverse();
+    // 멤버별 보기는 워밍업 포함 전체 인증일
+    const dates = boardDates.filter(d=>isCert(m.id, d)).reverse();
     const h = document.createElement('div'); h.className = 'feed-day-h';
     h.innerHTML = '<span>'+escapeHtml(m.name)+' 뚜아님</span><span class="cnt">'+dates.length+'일 인증</span>';
     wrap.appendChild(h);
@@ -919,8 +924,8 @@ function renderMe(){
     }
     row += '</div></div>'; cal.innerHTML += row;
   }
-  const galleryDates = beforeStart ? boardDates : pastDates;
-  const certDates = galleryDates.slice().reverse().filter(d=>isCert(m.id, d));
+  // 내 기록 갤러리는 워밍업 포함 전체 인증일 (공식 통계는 위에서 pastDates로 별도 산정)
+  const certDates = boardDates.slice().reverse().filter(d=>isCert(m.id, d));
   const limit = galAll ? certDates.length : 8;
   const g = $('meGallery'); g.innerHTML = '';
   certDates.slice(0, limit).forEach(d=>{
