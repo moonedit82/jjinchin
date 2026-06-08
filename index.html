@@ -304,6 +304,12 @@
       <img class="preview" id="prevH" alt="">
       <input type="file" id="fileH" accept="image/*">
       <button class="pickbtn" id="pickH">📷 #습관만들기 올리기</button>
+      <div id="habitExtras" style="display:none; margin-top:14px; padding-top:14px; border-top:1px dashed var(--line)">
+        <div style="font-size:11.5px; color:var(--ash); margin-bottom:8px">✨ 추가 사진 (선택 · 보름달 카운트 X)</div>
+        <div id="habitExtrasList" style="display:grid; grid-template-columns:repeat(4,1fr); gap:6px; margin-bottom:10px"></div>
+        <input type="file" id="fileHX" accept="image/*">
+        <button class="pickbtn" id="pickHX" style="font-size:13px">📷 사진 더 추가</button>
+      </div>
     </div>
     <button class="btn" id="submitBtn" style="margin-top:16px" disabled>오늘 인증 올리기</button>
     <div class="closing">당일 23:59까지 사진 인증만 인정!<br>한 컷=◐ 절반, 두 컷=● 완성</div>
@@ -492,7 +498,7 @@ const $ = id => document.getElementById(id);
 async function loadAll(){
   const [mem, cert, fd] = await Promise.all([
     sbReq('GET', 'members?select=id,name,is_admin,habit,sort_order,pin_set,created_at&order=sort_order'),
-    sbReq('GET', 'certs?select=member_id,cdate,p1_url,p1_thumb,p2_url,p2_thumb,updated_at'),
+    sbReq('GET', 'certs?select=member_id,cdate,p1_url,p1_thumb,p2_url,p2_thumb,p2_extra_urls,p2_extra_thumbs,updated_at'),
     sbReq('GET', 'feed?select=member_id,mission_key,link,created_at&order=created_at.desc'),
   ]);
   MEMBERS = mem || [];
@@ -507,10 +513,10 @@ function moonChar(l){return l>=2?'●':(l>=1?'◐':'○');}
 function moonCls(l){return l>=2?'done':(l>=1?'half':'miss');}
 function dayData(mid, date){
   const c = CERTS[mid] && CERTS[mid][date];
-  if(!c) return {lvl:0, thumb:null, p1_url:null, p2_url:null};
+  if(!c) return {lvl:0, thumb:null, p1_url:null, p2_url:null, p2_extra_urls:[], p2_extra_thumbs:[]};
   const lvl = (c.p1_url?1:0) + (c.p2_url?1:0);
   const thumb = c.p1_thumb || c.p2_thumb || null;
-  return {lvl, thumb, p1_url:c.p1_url, p2_url:c.p2_url, p1_thumb:c.p1_thumb, p2_thumb:c.p2_thumb};
+  return {lvl, thumb, p1_url:c.p1_url, p2_url:c.p2_url, p1_thumb:c.p1_thumb, p2_thumb:c.p2_thumb, p2_extra_urls:c.p2_extra_urls||[], p2_extra_thumbs:c.p2_extra_thumbs||[]};
 }
 function isCert(mid, d){const l=dayData(mid,d).lvl; return COUNT_FULL_ONLY ? l>=2 : l>=1;}
 function findMemberById(id){return MEMBERS.find(m=>m.id===id);}
@@ -682,6 +688,15 @@ function renderToday(){
   $('myHabit').innerHTML = m.habit ? '내 습관: <b>'+escapeHtml(m.habit)+'</b> 인증 컷' : '내 습관 인증 컷';
   slotState('P', $('stP'), $('prevP'), $('pickP'), d.p1_url, d.p1_thumb, pendP);
   slotState('H', $('stH'), $('prevH'), $('pickH'), d.p2_url, d.p2_thumb, pendH);
+  // 습관 추가 사진 섹션 (메인 사진 저장된 경우에만 노출)
+  const hxBox = $('habitExtras');
+  if(d.p2_url){
+    hxBox.style.display = 'block';
+    const thumbs = d.p2_extra_thumbs || [];
+    $('habitExtrasList').innerHTML = thumbs.map(t => '<div style="aspect-ratio:1/1; border-radius:8px; overflow:hidden; box-shadow:var(--photo-shadow)"><img src="'+t+'" loading="lazy" style="width:100%;height:100%;object-fit:cover"></div>').join('');
+  } else {
+    hxBox.style.display = 'none';
+  }
   updateSubmit();
 }
 function slotState(which, stEl, prevEl, btnEl, savedUrl, savedThumb, pend){
@@ -727,6 +742,44 @@ $('fileH').onchange = async e=>{
     pendH = {full, thumb, preview: URL.createObjectURL(full)};
     renderToday();
   }catch(err){console.error(err); toast('사진 처리 실패');}
+};
+
+// 습관 추가 사진 — 메인 저장 후 자유롭게 N장 추가 (보름달 카운트 X)
+$('pickHX').onclick = ()=>$('fileHX').click();
+$('fileHX').onchange = async e=>{
+  const f = e.target.files[0]; if(!f) return;
+  e.target.value = '';   // 같은 파일 다시 골라도 onchange 작동하게
+  const m = user; if(!m) return;
+  const cert = (CERTS[m.id] && CERTS[m.id][TODAY]) || null;
+  if(!cert || !cert.p2_url){ toast('먼저 습관 메인 사진을 올려주세요'); return; }
+  const btn = $('pickHX'); const orig = btn.textContent;
+  btn.disabled = true; btn.textContent = '추가 중…';
+  try{
+    const full = await compressImage(f, 1280, 0.78);
+    const thumb = await compressImage(f, 240, 0.72);
+    const ts = Date.now();
+    const fullUrl = await sbUpload(m.id+'/'+TODAY+'_p2x_'+ts+'.jpg', full);
+    let thumbUrl;
+    try{ thumbUrl = await sbUpload(m.id+'/'+TODAY+'_p2x_'+ts+'_t.jpg', thumb); }
+    catch(te){ console.warn('p2x thumb fallback', te); thumbUrl = fullUrl; }
+    const newUrls = [...(cert.p2_extra_urls||[]), fullUrl];
+    const newThumbs = [...(cert.p2_extra_thumbs||[]), thumbUrl];
+    await sbReq('POST', 'certs?on_conflict=member_id,cdate', {
+      member_id: m.id, cdate: TODAY,
+      p2_extra_urls: newUrls,
+      p2_extra_thumbs: newThumbs,
+      updated_at: new Date().toISOString()
+    }, {'Prefer':'resolution=merge-duplicates,return=representation'});
+    cert.p2_extra_urls = newUrls;
+    cert.p2_extra_thumbs = newThumbs;
+    toast('사진 추가됨 ✨');
+    renderToday();
+  }catch(err){
+    console.error('p2x upload', err);
+    toast('추가 실패: '+((err.message||'').slice(0,80)), 5000);
+  }finally{
+    btn.disabled = false; btn.textContent = orig;
+  }
 };
 $('submitBtn').onclick = async ()=>{
   const m = user; if(!m) return;
@@ -860,7 +913,15 @@ function openLightbox(m, d){
   const item = (label, url) => url
     ? '<div class="item"><div class="l">'+label+'</div><img src="'+url+'" loading="lazy"></div>'
     : '<div class="item"><div class="l">'+label+'</div><div class="none">○</div></div>';
-  const inner = item('🧴 #잘자요루틴', dd.p1_url) + item('🌱 #습관만들기', dd.p2_url);
+  let inner = item('🧴 #잘자요루틴', dd.p1_url) + item('🌱 #습관만들기', dd.p2_url);
+  // 습관 추가 사진들 (있는 경우만 노출)
+  if(dd.p2_extra_urls && dd.p2_extra_urls.length){
+    inner += '<div class="item"><div class="l">✨ 추가 사진 ('+dd.p2_extra_urls.length+'장)</div>';
+    dd.p2_extra_urls.forEach(u => {
+      inner += '<img src="'+u+'" loading="lazy" style="width:100%;border-radius:14px;display:block;margin-bottom:8px;box-shadow:var(--photo-shadow)">';
+    });
+    inner += '</div>';
+  }
   box.innerHTML = '<h4>'+escapeHtml(m.name)+' 뚜아님 '+moonChar(dd.lvl)+'</h4><div class="d">'+d+' ('+DOW[parse(d).getDay()]+')</div>'
     + inner + '<button class="btn ghost" onclick="closeLightbox()" style="margin-top:4px">닫기</button>';
   $('lightbox').classList.add('show');
