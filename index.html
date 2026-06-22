@@ -312,7 +312,7 @@
       </div>
     </div>
     <button class="btn" id="submitBtn" style="margin-top:16px" disabled>오늘 인증 올리기</button>
-    <div class="closing">당일 23:59까지 사진 인증만 인정!<br>한 컷=◐ 절반, 두 컷=● 완성</div>
+    <div class="closing">다음날 새벽 3시까지 사진 인증 인정 (자정 땡 부담 없이 🌙)<br>한 컷=◐ 절반, 두 컷=● 완성</div>
   </section>
 
   <!-- 전체 인증 보드 -->
@@ -473,7 +473,9 @@ function mmdd(s){const[,m,d]=s.split('-');return (+m)+'/'+(+d);}
 
 const START = CFG.start;
 const END = addDays(START, CFG.weeks*7-1);
-const _realToday = fmt(new Date());
+// 자정 땡 부담 완화: 새벽 3시 이전 업로드는 전날 인증으로 카운트
+const DAILY_CUTOFF_HOUR = 3;
+const _realToday = (()=>{ const n=new Date(); if(n.getHours()<DAILY_CUTOFF_HOUR) n.setDate(n.getDate()-1); return fmt(n); })();
 // 워밍업/베타 기간(시작 전) 처리: 6/1부터 사용 가능, 본격 집계는 START(6/8)부터
 const TODAY = _realToday > END ? END : _realToday;
 const beforeStart = _realToday < START;
@@ -670,7 +672,7 @@ function renderToday(){
                               : d.lvl>=2 ? '오늘 인증 완성! 잘했어요 🌙'
                               : d.lvl>=1 ? '절반 완성 ◐ — 한 컷만 더 올리면 보름달!'
                                          : '아직 오늘 인증 전이에요';
-  $('todayDate').textContent = beforeStart ? (TODAY+' · 본격 집계는 '+START+'부터') : (TODAY+' · 자정 전까지 인정');
+  $('todayDate').textContent = beforeStart ? (TODAY+' · 본격 집계는 '+START+'부터') : (TODAY+' · 다음날 새벽 3시까지 인정');
   const wkStart = addDays(START, (curWeek-1)*7);
   const strip = $('weekStrip'); strip.innerHTML = '';
   for(let i=0;i<7;i++){
